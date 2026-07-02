@@ -1,0 +1,221 @@
+.hero {
+
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
+    min-height: 85vh;
+
+    overflow: hidden;
+
+    padding: 120px 24px 80px;
+
+}
+
+.hero-container {
+
+    width: 100%;
+    max-width: var(--container);
+
+    margin: 0 auto;
+
+}
+
+.hero-badge {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 8px 18px;
+
+    margin-bottom: 28px;
+
+    border-radius: 999px;
+
+    border: 1px solid rgba(79, 209, 255, .35);
+
+    background: rgba(79, 209, 255, .08);
+
+    color: var(--aurora-primary);
+
+    font-size: 13px;
+
+    letter-spacing: 1px;
+
+    text-transform: uppercase;
+
+}
+
+.hero h1 {
+
+    font-size: 88px;
+
+    line-height: 1;
+
+    margin-bottom: 18px;
+
+}
+
+.hero h2 {
+
+    max-width: 900px;
+
+    font-size: 64px;
+
+    line-height: 1.08;
+
+    margin-bottom: 32px;
+
+}
+
+.hero-description {
+
+    max-width: 760px;
+
+    font-size: 20px;
+
+    line-height: 1.8;
+
+    color: var(--aurora-text-muted);
+
+    margin-bottom: 48px;
+
+}
+
+.hero-actions {
+
+    display: flex;
+
+    gap: 20px;
+
+    flex-wrap: wrap;
+
+}
+
+.hero::before {
+
+    content: "";
+
+    position: absolute;
+
+    width: 900px;
+    height: 900px;
+
+    left: 50%;
+    top: -350px;
+
+    transform: translateX(-50%);
+
+    border-radius: 50%;
+
+    background: radial-gradient(circle,
+            rgba(79, 209, 255, .12),
+            transparent 70%);
+
+    filter: blur(90px);
+
+    pointer-events: none;
+
+}
+
+.hero::after {
+
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    height: 220px;
+
+    background: linear-gradient(to bottom,
+            transparent,
+            rgba(255, 255, 255, .02));
+
+    pointer-events: none;
+
+}
+
+/* ---------- Laptop ---------- */
+
+@media (max-width:1200px) {
+
+    .hero h1 {
+
+        font-size: 72px;
+
+    }
+
+    .hero h2 {
+
+        font-size: 50px;
+
+    }
+
+}
+
+/* ---------- Tablet ---------- */
+
+@media (max-width:1024px) {
+
+    .hero {
+
+        min-height: auto;
+
+        padding: 150px 24px 100px;
+
+    }
+
+    .hero h1 {
+
+        font-size: 64px;
+
+    }
+
+    .hero h2 {
+
+        font-size: 42px;
+
+    }
+
+}
+
+/* ---------- Mobile ---------- */
+
+@media (max-width:768px) {
+
+    .hero {
+
+        padding: 130px 20px 80px;
+
+    }
+
+    .hero h1 {
+
+        font-size: 48px;
+
+    }
+
+    .hero h2 {
+
+        font-size: 34px;
+
+    }
+
+    .hero-description {
+
+        font-size: 16px;
+
+    }
+
+    .hero-actions {
+
+        flex-direction: column;
+
+    }
+
+}

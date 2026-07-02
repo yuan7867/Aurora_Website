@@ -1,0 +1,44 @@
+:root {
+
+    /* Aurora Brand */
+
+    --aurora-primary: #4FD1FF;
+    --aurora-secondary: #8B7CFF;
+
+    /* Background */
+
+    --aurora-bg: #060816;
+    --aurora-surface: rgba(255, 255, 255, .04);
+
+    /* Text */
+
+    --aurora-text: #FFFFFF;
+    --aurora-text-muted: rgba(255, 255, 255, .68);
+
+    /* Border */
+
+    --aurora-border: rgba(255, 255, 255, .08);
+
+    /* Radius */
+
+    --radius: 20px;
+
+    /* Shadow */
+
+    --shadow-card:
+        0 24px 80px rgba(0, 0, 0, .30);
+
+    --shadow-hover:
+        0 28px 90px rgba(79, 209, 255, .12);
+
+    /* Transition */
+
+    --transition: .35s ease;
+
+    /* Layout */
+
+    --container: 1280px;
+
+    --section-space: 120px;
+
+}

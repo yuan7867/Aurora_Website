@@ -1,0 +1,26 @@
+.section {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 120px 24px;
+}
+
+.section-tag {
+    color: var(--aurora-primary);
+    font-size: 14px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+}
+
+.section-title {
+    max-width: 760px;
+    font-size: 56px;
+    line-height: 1.1;
+    margin-bottom: 24px;
+}
+
+.section-description {
+    max-width: 720px;
+    color: var(--aurora-text-muted);
+    line-height: 1.8;
+}

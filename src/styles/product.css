@@ -1,0 +1,355 @@
+.back-home {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-bottom: 28px;
+
+    color: var(--aurora-primary);
+
+    font-size: 15px;
+
+    font-weight: 600;
+
+    text-decoration: none;
+
+    transition: .25s;
+
+}
+
+.back-home:hover {
+
+    transform: translateX(-6px);
+
+    color: #7fdcff;
+
+}
+
+.product-hero {
+
+    position: relative;
+
+    max-width: 1280px;
+
+    margin: 0 auto;
+
+    padding: 170px 24px 100px;
+
+    display: grid;
+
+    grid-template-columns: 1.1fr 0.9fr;
+
+    gap: 72px;
+
+    align-items: center;
+
+}
+
+.hero-glow {
+
+    position: absolute;
+
+    width: 700px;
+
+    height: 700px;
+
+    right: -180px;
+
+    top: -250px;
+
+    border-radius: 50%;
+
+    background: radial-gradient(circle,
+            rgba(79, 209, 255, .18),
+            rgba(139, 124, 255, .08),
+            transparent 70%);
+
+    filter: blur(80px);
+
+    pointer-events: none;
+
+    z-index: -1;
+
+}
+
+.product-badge {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 8px 18px;
+
+    border-radius: 999px;
+
+    background: rgba(79, 209, 255, .12);
+
+    color: var(--aurora-primary);
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    margin-bottom: 28px;
+
+}
+
+.product-left h1 {
+
+    font-size: 72px;
+
+    line-height: 1.05;
+
+    margin-bottom: 18px;
+
+}
+
+.product-left h2 {
+
+    font-size: 30px;
+
+    color: var(--aurora-text-muted);
+
+    margin-bottom: 24px;
+
+}
+
+.product-left p {
+
+    max-width: 720px;
+
+    color: var(--aurora-text-muted);
+
+    line-height: 1.9;
+
+    margin-bottom: 42px;
+
+}
+
+.product-actions {
+
+    display: flex;
+
+    gap: 18px;
+
+}
+
+.product-actions button {
+
+    height: 54px;
+
+    padding: 0 34px;
+
+    border: none;
+
+    border-radius: 16px;
+
+    cursor: pointer;
+
+    font-size: 16px;
+
+    font-weight: 600;
+
+    color: #fff;
+
+    background: linear-gradient(135deg,
+            var(--aurora-primary),
+            var(--aurora-secondary));
+
+    transition: .25s;
+
+}
+
+.product-actions button:hover {
+
+    transform: translateY(-4px);
+
+}
+
+.product-actions .secondary {
+
+    background: transparent;
+
+    color: var(--aurora-text);
+
+    border: 1px solid var(--aurora-border);
+
+}
+
+.overview-card {
+
+    padding: 36px;
+
+    border-radius: 24px;
+
+    background: rgba(255, 255, 255, .04);
+
+    border: 1px solid rgba(255, 255, 255, .08);
+
+    backdrop-filter: blur(18px);
+
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .30);
+
+}
+
+.overview-card h3 {
+
+    margin-bottom: 28px;
+
+}
+
+.overview-card ul {
+
+    list-style: none;
+
+    padding: 0;
+
+    margin: 0;
+
+}
+
+.overview-card li {
+
+    padding: 14px 0;
+
+    border-bottom: 1px solid rgba(255, 255, 255, .05);
+
+    line-height: 1.8;
+
+    color: var(--aurora-text-muted);
+
+}
+
+.overview-card li:last-child {
+
+    border-bottom: none;
+
+}
+
+.product-page {
+
+    max-width: 1280px;
+
+    margin: 0 auto;
+
+    padding: 20px 24px 100px;
+
+}
+
+.product-page h3 {
+
+    font-size: 40px;
+
+    margin-bottom: 36px;
+
+}
+
+.highlights {
+
+    margin-bottom: 90px;
+
+}
+
+.highlight-grid,
+.feature-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(3, 1fr);
+
+    gap: 24px;
+
+}
+
+.highlight-card,
+.feature-card {
+
+    padding: 34px;
+
+    border-radius: 20px;
+
+    background: rgba(255, 255, 255, .03);
+
+    border: 1px solid rgba(255, 255, 255, .08);
+
+    transition: .25s;
+
+}
+
+.highlight-card:hover,
+.feature-card:hover {
+
+    transform: translateY(-6px);
+
+    border-color: rgba(79, 209, 255, .35);
+
+}
+
+.highlight-card h4 {
+
+    margin-bottom: 16px;
+
+}
+
+.highlight-card p {
+
+    line-height: 1.8;
+
+    color: var(--aurora-text-muted);
+
+}
+
+@media (max-width:1024px) {
+
+    .product-hero {
+
+        grid-template-columns: 1fr;
+
+    }
+
+    .highlight-grid,
+    .feature-grid {
+
+        grid-template-columns: repeat(2, 1fr);
+
+    }
+
+}
+
+@media (max-width:768px) {
+
+    .product-hero {
+
+        padding: 140px 20px 80px;
+
+    }
+
+    .product-left h1 {
+
+        font-size: 48px;
+
+    }
+
+    .product-left h2 {
+
+        font-size: 24px;
+
+    }
+
+    .product-actions {
+
+        flex-direction: column;
+
+    }
+
+    .highlight-grid,
+    .feature-grid {
+
+        grid-template-columns: 1fr;
+
+    }
+
+}
