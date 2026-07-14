@@ -4,7 +4,7 @@ const proofItems = [
     ["Commercial Verified", "Prepared for commercial purchase, license delivery and customer access."],
     ["Battle Tested", "Positioned around real trading validation rather than presentation-only claims."],
     ["Production Ready", "Frontend flow, customer path and release handoff are structured for launch."],
-    ["Aurora Cloud Synced", "Live trading values are reserved for Aurora Cloud API integration."]
+    ["Aurora Cloud Synced", "Live trading values are read through the Aurora Cloud API when the cloud is online."]
 ];
 
 function VerifiedPerformance() {

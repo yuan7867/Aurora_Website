@@ -51,9 +51,9 @@ const products = [
         theme: "blue",
         subtitle: "Built for long-term disciplined traders.",
         productId: "mt5",
-        checkout: "/checkout?product=aurora-mt5-ai",
-        price: "USD 499",
-        billing: "Commercial license",
+        checkout: "/pricing?product=aurora-mt5-ai",
+        price: "USD 19.90",
+        billing: "Monthly subscription available",
         features: [
             {
                 icon: "shield",
@@ -79,9 +79,9 @@ const products = [
         theme: "gold",
         subtitle: "Built for traders seeking maximum opportunity.",
         productId: "xau",
-        checkout: "/checkout?product=aurora-xau-trader",
-        price: "USD 899",
-        billing: "Commercial license",
+        checkout: "/pricing?product=aurora-xau-trader",
+        price: "USD 19.90",
+        billing: "Monthly subscription available",
         features: [
             {
                 icon: "zap",
@@ -127,8 +127,8 @@ function Products() {
                             <small>{product.billing}</small>
                         </div>
 
-                        <div className="product-live-slot" aria-label={`${product.title} live MT5 slot`}>
-                            <span>Live MT5 Slot Reserved</span>
+                        <div className="product-live-slot" aria-label={`${product.title} commercial access`}>
+                            <span>Commercial access through Aurora checkout</span>
                         </div>
 
                         <div className="product-features">

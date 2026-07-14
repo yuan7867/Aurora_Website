@@ -28,7 +28,7 @@ function AccountLicenses() {
                         <article className="account-row" key={license.id}>
                             <strong>{license.productName}</strong>
                             <span>{license.licenseKey || "Pending"}</span>
-                            <span className={`account-status ${license.status === "Issued" ? "ready" : "reserved"}`}>{license.status}</span>
+                            <span className={`account-status ${license.status === "Issued" ? "ready" : "pending"}`}>{license.status}</span>
                         </article>
                     ))}
                 </section>

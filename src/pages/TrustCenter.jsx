@@ -211,7 +211,7 @@ function TrustCenter() {
                                 {release?.version || release?.release_version || readValue(heartbeat, ["product_id"]) || "Cloud release pending"}
                             </TrustRow>
                             <TrustRow label="Summary">
-                                {release?.summary || "Release data is reserved for Aurora Cloud release service."}
+                                {release?.summary || "Release data will appear from Aurora Cloud release service when available."}
                             </TrustRow>
                             <TrustRow label="Cloud API">Live</TrustRow>
                             <TrustRow label="Data Source">Aurora Cloud API</TrustRow>

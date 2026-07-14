@@ -10,30 +10,33 @@ const products = {
     "aurora-mt5-ai": {
         name: "Aurora MT5 AI Trader",
         strategy: "Conservative Strategy",
-        price: "USD 499",
-        license: "Commercial license"
+        summary: "Disciplined MT5 execution for long-term traders."
     },
     "aurora-xau-trader": {
-        name: "Aurora XAU Trader",
+        name: "Aurora XAU AI Trader",
         strategy: "Aggressive Strategy",
-        price: "USD 899",
-        license: "Commercial license"
+        summary: "Active XAU strategy for maximum opportunity."
+    },
+    "aurora-bundle": {
+        name: "Aurora Bundle",
+        strategy: "MT5 + XAU",
+        summary: "Both Aurora trading systems under one customer journey."
     }
 };
 
 const plans = {
     monthly: {
-        name: "Aurora Monthly",
+        name: "Monthly",
         strategy: "Best for getting started",
         price: "USD 19.90",
-        license: "Monthly commercial access",
+        license: "Monthly subscription",
         productId: "aurora-monthly"
     },
     yearly: {
-        name: "Aurora Yearly",
+        name: "Yearly",
         strategy: "Most Popular",
         price: "USD 199",
-        license: "Yearly commercial access",
+        license: "Yearly subscription. Save 17%",
         productId: "aurora-yearly"
     }
 };
@@ -42,9 +45,9 @@ function Checkout() {
     const params = new URLSearchParams(globalThis.location.search);
     const planId = params.get("plan");
     const productId = params.get("product") || "aurora-mt5-ai";
-    const selectedPlan = plans[planId];
-    const product = selectedPlan || products[productId] || products["aurora-mt5-ai"];
-    const checkoutProductId = selectedPlan?.productId || productId;
+    const selectedPlan = plans[planId] || plans.yearly;
+    const product = products[productId] || products["aurora-mt5-ai"];
+    const checkoutProductId = selectedPlan.productId;
     const paymentFailed = params.get("payment") === "failed";
     const [customer, setCustomer] = useState({
         name: globalThis.localStorage?.getItem("auroraCustomerName") || "",
@@ -87,8 +90,8 @@ function Checkout() {
                     <span className="customer-tag">Checkout</span>
                     <h1>Confirm your Aurora order.</h1>
                     <p>
-                        Review your selected product before continuing to PayPal. Payment is created by Aurora Commerce
-                        API and can run in sandbox or production mode.
+                        Review your selected product and subscription before continuing to PayPal. Payment is created
+                        by Aurora Commerce API and can run in sandbox or production mode.
                     </p>
                     {paymentFailed && <p className="product-state">Payment was cancelled or failed. Please review and try again.</p>}
                     <div className="customer-actions">
@@ -101,17 +104,22 @@ function Checkout() {
                         <span className="customer-tag">Order Summary</span>
                         <h2>{product.name}</h2>
                         <div className="price">
-                            {product.price}
-                            <span> / {product.license}</span>
+                            {selectedPlan.price}
+                            <span> / {selectedPlan.license}</span>
                         </div>
                         <div className="trust-row">
                             <span>Strategy</span>
                             <strong>{product.strategy}</strong>
                         </div>
                         <div className="trust-row">
+                            <span>Subscription</span>
+                            <strong>{selectedPlan.name}</strong>
+                        </div>
+                        <div className="trust-row">
                             <span>Delivery</span>
                             <strong>License and download after PayPal success</strong>
                         </div>
+                        <p>{product.summary}</p>
                     </article>
 
                     <article className="customer-card">

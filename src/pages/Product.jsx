@@ -88,14 +88,14 @@ function Product() {
                 },
                 {
                     title: "Customer Area Ready",
-                    description: cloudProduct.download_enable ? "Download delivery is prepared through Aurora Cloud." : "Downloads, licenses and updates are reserved for Aurora Cloud customer delivery."
+                    description: cloudProduct.download_enable ? "Download delivery is prepared through Aurora Cloud." : "Downloads, licenses and updates are managed through Aurora Cloud customer delivery."
                 }
             ],
             features: [
                 `Live Status: ${cloudProduct.status}`,
                 `Battle Test: ${cloudProduct.battle_test ? "Visible" : "Not visible"}`,
                 `Customer Area: Ready for future login, licenses, downloads and updates`,
-                `Support Path: ${cloudProduct.support_email || "Support center reserved"}`
+                `Support Path: ${cloudProduct.support_email || "Aurora customer support"}`
             ],
             architecture: [
                 "product.yaml",

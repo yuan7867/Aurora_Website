@@ -23,7 +23,7 @@ function AccountSupport() {
                 <article className="account-card">
                     <span>Documentation</span>
                     <h2>Docs</h2>
-                    <p>Customer documentation entry is reserved for product guides and release notes.</p>
+                    <p>Product guides, release notes and activation instructions are organized for customer access.</p>
                 </article>
             </section>
         </CustomerLayout>

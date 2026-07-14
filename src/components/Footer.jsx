@@ -17,7 +17,7 @@ function Footer() {
             </div>
 
             <div className="footer-bottom">
-                Copyright 2026 Aurora Technologies. All Rights Reserved.
+                Copyright 2026 Aurora Technologies. All Rights Protected.
             </div>
         </footer>
     );

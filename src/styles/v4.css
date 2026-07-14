@@ -39,6 +39,24 @@
     gap: 18px;
 }
 
+.cloud-offline-state {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+    padding: 22px 26px;
+    color: rgba(255, 255, 255, .76);
+    border: 1px solid rgba(232, 197, 71, .18);
+    border-radius: 24px;
+    background: rgba(232, 197, 71, .06);
+}
+
+.cloud-offline-state strong {
+    color: #fff;
+    font-size: 20px;
+}
+
 .live-performance-grid article,
 .verified-grid article,
 .home-pricing-grid article,
@@ -256,10 +274,13 @@
 @media (max-width: 1100px) {
     .live-performance-grid,
     .verified-grid,
-    .home-pricing-grid,
     .journey-grid,
     .why-aurora-grid,
     .faq-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .home-pricing-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 

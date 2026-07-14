@@ -13,8 +13,8 @@ function BookDemo() {
                     <span className="customer-tag">Book a Demo</span>
                     <h1>See Aurora MT5 AI live before you commit.</h1>
                     <p>
-                        The demo flow is reserved for future Google Calendar and Google Meet integration. For now, this
-                        page makes the customer intent clear without submitting or transmitting form data.
+                        Request a product conversation for Aurora MT5 AI Trader, Aurora XAU AI Trader, subscription
+                        options, license delivery and customer onboarding.
                     </p>
                 </section>
 

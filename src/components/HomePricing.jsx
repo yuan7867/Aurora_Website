@@ -2,16 +2,16 @@ import "../styles/v4.css";
 
 const tiers = [
     {
-        name: "Monthly",
+        name: "Choose Product",
         price: "USD 19.90",
-        summary: "Best for getting started with Aurora commercial access.",
-        href: "/checkout?plan=monthly"
+        summary: "Start from MT5, XAU, or Aurora Bundle before selecting subscription.",
+        href: "/pricing"
     },
     {
-        name: "Yearly",
+        name: "Choose Subscription",
         price: "USD 199",
-        summary: "Save 17%. Most popular for committed traders.",
-        href: "/checkout?plan=yearly"
+        summary: "Monthly and Yearly options. Yearly Save 17%.",
+        href: "/pricing"
     }
 ];
 
@@ -20,7 +20,7 @@ function HomePricing() {
         <section className="home-pricing" aria-label="Aurora pricing options">
             <div className="v4-section-heading">
                 <p>Pricing</p>
-                <h2>Simple plans for commercial trading systems.</h2>
+                <h2>Product first. Subscription second.</h2>
             </div>
 
             <div className="home-pricing-grid">
