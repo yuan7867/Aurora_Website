@@ -1,5 +1,5 @@
-import '../styles/roadmap.css'
-import roadmap from '../data/roadmap'
+import "../styles/roadmap.css";
+import roadmap from "../data/roadmap";
 
 function Roadmap() {
     return (
@@ -41,7 +41,8 @@ function Roadmap() {
                         <div className="roadmap-footer">
 
                             <span className="roadmap-status">
-                                ● {item.status}
+                                <span aria-hidden="true">•</span>
+                                {item.status}
                             </span>
 
                         </div>
@@ -53,7 +54,7 @@ function Roadmap() {
             </div>
 
         </section>
-    )
+    );
 }
 
-export default Roadmap
+export default Roadmap;

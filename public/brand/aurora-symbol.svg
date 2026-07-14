@@ -1,0 +1,40 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="aurora-flow-cyan" x1="41" y1="214" x2="170" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4CC9FF" stop-opacity="0.05"/>
+      <stop offset="0.45" stop-color="#4CC9FF"/>
+      <stop offset="1" stop-color="#F8FAFC"/>
+    </linearGradient>
+    <linearGradient id="aurora-flow-violet" x1="213" y1="215" x2="86" y2="45" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7A5CFF" stop-opacity="0.08"/>
+      <stop offset="0.5" stop-color="#7A5CFF"/>
+      <stop offset="1" stop-color="#4CC9FF"/>
+    </linearGradient>
+    <linearGradient id="aurora-flow-gold" x1="121" y1="222" x2="164" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E8C547" stop-opacity="0.04"/>
+      <stop offset="0.56" stop-color="#E8C547"/>
+      <stop offset="1" stop-color="#F8FAFC"/>
+    </linearGradient>
+    <radialGradient id="aurora-core" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 128) rotate(90) scale(65)">
+      <stop offset="0" stop-color="#F8FAFC" stop-opacity="0.95"/>
+      <stop offset="0.32" stop-color="#4CC9FF" stop-opacity="0.36"/>
+      <stop offset="1" stop-color="#060B17" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft-glow" x="-60" y="-60" width="376" height="376" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.298 0 0 0 0 0.788 0 0 0 0 1 0 0 0 0.42 0"/>
+      <feBlend in="SourceGraphic"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" fill="none"/>
+  <g filter="url(#soft-glow)">
+    <path d="M128 18L137.5 51.5L171 61L137.5 70.5L128 104L118.5 70.5L85 61L118.5 51.5L128 18Z" fill="#F8FAFC"/>
+    <path d="M128 34L133 52.5L151.5 57.5L133 62.5L128 81L123 62.5L104.5 57.5L123 52.5L128 34Z" fill="#4CC9FF"/>
+    <path d="M48 205C85 169 70 109 121 82C149 67 178 79 203 101" stroke="url(#aurora-flow-cyan)" stroke-width="15" stroke-linecap="round"/>
+    <path d="M208 206C172 171 189 111 136 82C108 67 79 79 53 102" stroke="url(#aurora-flow-violet)" stroke-width="15" stroke-linecap="round"/>
+    <path d="M128 219C139 178 115 132 128 88C134 66 148 50 166 39" stroke="url(#aurora-flow-gold)" stroke-width="8" stroke-linecap="round"/>
+    <path d="M72 170C98 150 107 122 128 105C149 122 158 150 184 170" stroke="#F8FAFC" stroke-opacity="0.28" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="128" cy="128" r="63" fill="url(#aurora-core)"/>
+    <circle cx="128" cy="128" r="28" fill="#060B17" fill-opacity="0.92"/>
+  </g>
+</svg>

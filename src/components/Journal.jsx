@@ -1,5 +1,5 @@
-import '../styles/journal.css'
-import journal from '../data/journal'
+import "../styles/journal.css";
+import journal from "../data/journal";
 
 function Journal() {
     return (
@@ -34,7 +34,8 @@ function Journal() {
                             </span>
 
                             <span className="journal-status">
-                                ● {item.status}
+                                <span aria-hidden="true">•</span>
+                                {item.status}
                             </span>
 
                         </div>
@@ -80,8 +81,8 @@ function Journal() {
                                 {item.progress}% Complete
                             </span>
 
-                            <button className="journal-button">
-                                View Changelog →
+                            <button className="journal-button" type="button">
+                                View Changelog -&gt;
                             </button>
 
                         </div>
@@ -93,7 +94,7 @@ function Journal() {
             </div>
 
         </section>
-    )
+    );
 }
 
-export default Journal
+export default Journal;

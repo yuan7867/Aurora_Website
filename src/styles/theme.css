@@ -2,17 +2,18 @@
 
     /* Aurora Brand */
 
-    --aurora-primary: #4FD1FF;
-    --aurora-secondary: #8B7CFF;
+    --aurora-primary: #4CC9FF;
+    --aurora-secondary: #7A5CFF;
+    --aurora-gold: #E8C547;
 
     /* Background */
 
-    --aurora-bg: #060816;
-    --aurora-surface: rgba(255, 255, 255, .04);
+    --aurora-bg: #060B17;
+    --aurora-surface: rgba(10, 18, 35, .82);
 
     /* Text */
 
-    --aurora-text: #FFFFFF;
+    --aurora-text: #F8FAFC;
     --aurora-text-muted: rgba(255, 255, 255, .68);
 
     /* Border */
@@ -21,24 +22,24 @@
 
     /* Radius */
 
-    --radius: 20px;
+    --radius: 28px;
 
     /* Shadow */
 
     --shadow-card:
-        0 24px 80px rgba(0, 0, 0, .30);
+        0 24px 80px rgba(0, 0, 0, .18);
 
     --shadow-hover:
         0 28px 90px rgba(79, 209, 255, .12);
 
     /* Transition */
 
-    --transition: .35s ease;
+    --transition: 250ms ease;
 
     /* Layout */
 
-    --container: 1280px;
+    --container: 1600px;
 
-    --section-space: 120px;
+    --section-space: 160px;
 
 }

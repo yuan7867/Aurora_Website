@@ -1,0 +1,89 @@
+services:
+  aurora-website:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_AURORA_CLOUD_API_BASE: ${VITE_AURORA_CLOUD_API_BASE}
+        VITE_APP_NAME: ${VITE_APP_NAME}
+        VITE_APP_VERSION: ${VITE_APP_VERSION}
+    container_name: aurora-website
+    restart: always
+    environment:
+      VITE_AURORA_CLOUD_API_BASE: ${VITE_AURORA_CLOUD_API_BASE}
+      VITE_APP_NAME: ${VITE_APP_NAME}
+      VITE_APP_VERSION: ${VITE_APP_VERSION}
+    networks:
+      - aurora-core
+
+  aurora-commerce-api:
+    build:
+      context: .
+      dockerfile: commerce-api/Dockerfile
+    container_name: aurora-commerce-api
+    restart: always
+    environment:
+      PORT: 8080
+      PAYPAL_ENVIRONMENT: ${PAYPAL_ENVIRONMENT}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID}
+      WEBSITE_BASE_URL: ${WEBSITE_BASE_URL}
+      COMMERCE_DATA_DIR: ${COMMERCE_DATA_DIR}
+      JWT_SECRET: ${JWT_SECRET}
+      MT5_LICENSE_API_URL: ${MT5_LICENSE_API_URL}
+      MT5_LICENSE_API_TOKEN: ${MT5_LICENSE_API_TOKEN}
+      XAU_LICENSE_API_URL: ${XAU_LICENSE_API_URL}
+      XAU_LICENSE_API_TOKEN: ${XAU_LICENSE_API_TOKEN}
+      DOWNLOAD_BASE_URL: ${DOWNLOAD_BASE_URL}
+      MT5_DOWNLOAD_URL: ${MT5_DOWNLOAD_URL}
+      XAU_DOWNLOAD_URL: ${XAU_DOWNLOAD_URL}
+      EMAIL_API_URL: ${EMAIL_API_URL}
+      EMAIL_API_TOKEN: ${EMAIL_API_TOKEN}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL}
+    volumes:
+      - aurora-commerce-data:/app/data
+    networks:
+      - aurora-core
+
+  aurora-postgres:
+    image: postgres:16-alpine
+    container_name: aurora-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - aurora-postgres-data:/var/lib/postgresql/data
+    networks:
+      - aurora-core
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  aurora-nginx:
+    image: nginx:1.27-alpine
+    container_name: aurora-nginx
+    restart: always
+    depends_on:
+      - aurora-website
+      - aurora-commerce-api
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - aurora-core
+
+networks:
+  aurora-core:
+    name: aurora-core
+
+volumes:
+  aurora-postgres-data:
+    name: aurora-postgres-data
+  aurora-commerce-data:
+    name: aurora-commerce-data

@@ -1,159 +1,238 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import Navbar from "../components/Navbar";
+import ProductArchitecture from "../components/ProductArchitecture";
+import ProductBattleTest from "../components/ProductBattleTest";
+import ProductFeatures from "../components/ProductFeatures";
+import ProductHighlights from "../components/ProductHighlights";
+import ProductLayout from "../components/layouts/ProductLayout";
+import ProductReleaseNotes from "../components/ProductReleaseNotes";
 
-import productDetails from "../data/productDetails";
+import { getProduct } from "../services/auroraApi.js";
 
 import "../styles/product.css";
 
+const defaultSeo = {
+    title: "Aurora | Intelligent AI Software Company",
+    description: "Aurora builds intelligent AI software for traders, businesses and creative professionals."
+};
+
+function updateMeta(name, content, attribute = "name") {
+    let element = document.head.querySelector(`meta[${attribute}="${name}"]`);
+
+    if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attribute, name);
+        document.head.appendChild(element);
+    }
+
+    element.setAttribute("content", content);
+}
+
 function Product() {
-
     const { id } = useParams();
+    const [cloudProduct, setCloudProduct] = useState(null);
+    const [status, setStatus] = useState("loading");
 
-    const product = productDetails[id];
+    useEffect(() => {
+        let mounted = true;
 
-    if (!product) {
+        getProduct(id)
+            .then((product) => {
+                if (!mounted) {
+                    return;
+                }
+                setCloudProduct(product);
+                setStatus("ready");
+            })
+            .catch(() => {
+                if (!mounted) {
+                    return;
+                }
+                setCloudProduct(null);
+                setStatus("offline");
+            });
 
+        return () => {
+            mounted = false;
+        };
+    }, [id]);
+
+    const product = useMemo(() => {
+        if (!cloudProduct) {
+            return null;
+        }
+
+        return {
+            title: cloudProduct.product_name,
+            subtitle: `${cloudProduct.category} / ${cloudProduct.release_channel}`,
+            description: cloudProduct.description,
+            status: cloudProduct.status,
+            overview: [
+                `Product ID: ${cloudProduct.product_id}`,
+                `Version: ${cloudProduct.version}`,
+                `Build: ${cloudProduct.build}`,
+                `Cloud Version: ${cloudProduct.cloud_version}`,
+                `Minimum Cloud Version: ${cloudProduct.minimum_cloud_version}`
+            ],
+            highlights: [
+                {
+                    title: "Live Trading Visibility",
+                    description: "Customers can verify Aurora MT5 AI status, broker, server, session and Cloud connection before purchase."
+                },
+                {
+                    title: "Aurora Cloud Verified",
+                    description: cloudProduct.website_publish ? "Product readiness is synchronized from Aurora Cloud, not hardcoded into the website." : "Cloud publishing is not enabled yet."
+                },
+                {
+                    title: "Customer Area Ready",
+                    description: cloudProduct.download_enable ? "Download delivery is prepared through Aurora Cloud." : "Downloads, licenses and updates are reserved for Aurora Cloud customer delivery."
+                }
+            ],
+            features: [
+                `Live Status: ${cloudProduct.status}`,
+                `Battle Test: ${cloudProduct.battle_test ? "Visible" : "Not visible"}`,
+                `Customer Area: Ready for future login, licenses, downloads and updates`,
+                `Support Path: ${cloudProduct.support_email || "Support center reserved"}`
+            ],
+            architecture: [
+                "product.yaml",
+                "Aurora Product Registry Center",
+                "Aurora Cloud Database",
+                "Aurora Cloud REST API",
+                "Aurora Website"
+            ],
+            battle: {
+                status: cloudProduct.battle_test ? "Enabled" : "Not enabled",
+                version: cloudProduct.version,
+                runtime: cloudProduct.status,
+                aiEngine: cloudProduct.cloud_version
+            },
+            actions: [
+                {
+                    label: "Book Demo",
+                    href: "/book-demo"
+                },
+                {
+                    label: "Compare Plans",
+                    href: "/pricing",
+                    variant: "secondary"
+                },
+                {
+                    label: "Trust Center",
+                    href: "/trust",
+                    variant: "secondary"
+                }
+            ],
+            releaseNotes: [
+                {
+                    version: cloudProduct.version,
+                    date: cloudProduct.updated_time?.slice(0, 10) || "",
+                    summary: `${cloudProduct.product_name} is synchronized from Aurora Cloud Product Registry Center.`
+                }
+            ]
+        };
+    }, [cloudProduct]);
+
+    useEffect(() => {
+        if (!product) {
+            document.title = status === "loading" ? "Loading Product | Aurora" : "Product Not Found | Aurora";
+            updateMeta("description", "Aurora product information is provided by Aurora Cloud.");
+            updateMeta("og:title", document.title, "property");
+            updateMeta("og:description", "Aurora product information is provided by Aurora Cloud.", "property");
+            return;
+        }
+
+        const title = `${product.title} | Aurora`;
+        const description = product.description;
+
+        document.title = title;
+        updateMeta("description", description);
+        updateMeta("og:title", title, "property");
+        updateMeta("og:description", description, "property");
+
+        return () => {
+            document.title = defaultSeo.title;
+            updateMeta("description", defaultSeo.description);
+            updateMeta("og:title", defaultSeo.title, "property");
+            updateMeta("og:description", "Building AI That Works.", "property");
+        };
+    }, [product, status]);
+
+    if (status === "loading") {
         return (
             <>
                 <Navbar />
 
-                <section className="product-page">
-
-                    <h1>Product Not Found</h1>
-
-                    <Link className="back-home" to="/">
-                        ← Back to Aurora Hub
-                    </Link>
-
-                </section>
+                <main className="product-page product-shell">
+                    <h1>Loading Product</h1>
+                </main>
 
                 <Footer />
             </>
         );
+    }
 
+    if (status === "offline") {
+        return (
+            <>
+                <Navbar />
+
+                <main className="product-page product-shell">
+                    <h1>Aurora Cloud Offline</h1>
+
+                    <p className="product-offline">
+                        Product details are provided by Aurora Cloud. No fallback or mock product data is displayed while
+                        Aurora Cloud is unavailable.
+                    </p>
+
+                    <Link
+                        aria-label="Back to Aurora Hub home page"
+                        className="back-home"
+                        to="/"
+                    >
+                        &lt;- Back to Aurora Hub
+                    </Link>
+                </main>
+
+                <Footer />
+            </>
+        );
+    }
+
+    if (!product) {
+        return (
+            <>
+                <Navbar />
+
+                <main className="product-page product-shell">
+                    <h1>Product Not Found</h1>
+
+                    <Link
+                        aria-label="Back to Aurora Hub home page"
+                        className="back-home"
+                        to="/"
+                    >
+                        &lt;- Back to Aurora Hub
+                    </Link>
+                </main>
+
+                <Footer />
+            </>
+        );
     }
 
     return (
-        <>
-            <Navbar />
-
-            <section className="product-hero">
-
-                <div className="hero-glow"></div>
-
-                <div className="product-left">
-
-                    <Link className="back-home" to="/">
-                        ← Aurora Hub
-                    </Link>
-
-                    <div className="product-badge">
-                        {product.status}
-                    </div>
-
-                    <h1>{product.title}</h1>
-
-                    <h2>{product.subtitle}</h2>
-
-                    <p>{product.description}</p>
-
-                    <div className="product-actions">
-
-                        <button>
-                            Explore Features
-                        </button>
-
-                        <button className="secondary">
-                            Battle Test
-                        </button>
-
-                    </div>
-
-                </div>
-
-                <div className="product-right">
-
-                    <div className="overview-card">
-
-                        <h3>Product Overview</h3>
-
-                        <ul>
-
-                            {product.overview.map((item) => (
-
-                                <li key={item}>
-                                    ✓ {item}
-                                </li>
-
-                            ))}
-
-                        </ul>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-            <section className="product-page">
-
-                <section className="highlights">
-
-                    <h3>Why Aurora?</h3>
-
-                    <div className="highlight-grid">
-
-                        {product.highlights.map((item) => (
-
-                            <div
-                                key={item.title}
-                                className="highlight-card"
-                            >
-
-                                <h4>{item.title}</h4>
-
-                                <p>{item.description}</p>
-
-                            </div>
-
-                        ))}
-
-                    </div>
-
-                </section>
-
-                <section>
-
-                    <h3>Core Features</h3>
-
-                    <div className="feature-grid">
-
-                        {product.features.map((feature) => (
-
-                            <div
-                                key={feature}
-                                className="feature-card"
-                            >
-
-                                {feature}
-
-                            </div>
-
-                        ))}
-
-                    </div>
-
-                </section>
-
-            </section>
-
-            <Footer />
-
-        </>
+        <ProductLayout product={product}>
+            <ProductHighlights items={product.highlights} />
+            <ProductFeatures items={product.features} />
+            <ProductArchitecture items={product.architecture} />
+            <ProductBattleTest battle={product.battle} />
+            <ProductReleaseNotes notes={product.releaseNotes} />
+        </ProductLayout>
     );
-
 }
 
 export default Product;
