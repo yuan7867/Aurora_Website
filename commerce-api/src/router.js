@@ -11,6 +11,12 @@ import {
     resetPassword,
     verifyCustomerEmail
 } from "./services/identityService.js";
+import {
+    getHeartbeatData,
+    getPerformanceData,
+    getStatusData,
+    saveLiveTradingData
+} from "./services/liveTradingService.js";
 import { parseJsonBody, readJsonBody, readRawBody, sendJson } from "./utils/http.js";
 
 function getHeaders(request) {
@@ -41,6 +47,47 @@ function readCapture(capturePayload) {
     };
 }
 
+function readBearerToken(request) {
+    const authorization = request.headers.authorization || "";
+
+    if (authorization.toLowerCase().startsWith("bearer ")) {
+        return authorization.slice(7).trim();
+    }
+
+    return request.headers["x-aurora-token"] || "";
+}
+
+function assertCloudIngestAuthorized(request) {
+    if (!config.auroraCloudIngestToken) {
+        const error = new Error("Aurora Cloud ingest token is not configured.");
+        error.statusCode = 503;
+        throw error;
+    }
+
+    if (readBearerToken(request) !== config.auroraCloudIngestToken) {
+        const error = new Error("Aurora Cloud ingest request is unauthorized.");
+        error.statusCode = 401;
+        throw error;
+    }
+}
+
+async function sendCloudData(response, loader) {
+    try {
+        const data = await loader();
+        sendJson(response, 200, {
+            success: true,
+            data
+        });
+    } catch (error) {
+        sendJson(response, error.statusCode || 500, {
+            success: false,
+            error: {
+                message: error.message
+            }
+        });
+    }
+}
+
 export async function commerceRouter(request, response) {
     const url = new URL(request.url, "http://localhost");
 
@@ -54,6 +101,41 @@ export async function commerceRouter(request, response) {
             status: "ok",
             service: "aurora-commerce-api"
         });
+        return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/v1/heartbeat") {
+        await sendCloudData(response, getHeartbeatData);
+        return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/v1/status") {
+        await sendCloudData(response, getStatusData);
+        return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/v1/performance") {
+        await sendCloudData(response, getPerformanceData);
+        return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/v1/mt5/battle-test") {
+        try {
+            assertCloudIngestAuthorized(request);
+            const payload = await readJsonBody(request);
+            const data = await saveLiveTradingData(payload);
+            sendJson(response, 200, {
+                success: true,
+                data
+            });
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, {
+                success: false,
+                error: {
+                    message: error.message
+                }
+            });
+        }
         return;
     }
 

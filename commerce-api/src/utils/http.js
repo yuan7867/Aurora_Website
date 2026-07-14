@@ -30,7 +30,7 @@ export function sendJson(response, statusCode, payload) {
     response.writeHead(statusCode, {
         "access-control-allow-origin": "*",
         "access-control-allow-methods": "GET,POST,OPTIONS",
-        "access-control-allow-headers": "content-type,paypal-auth-algo,paypal-cert-url,paypal-transmission-id,paypal-transmission-sig,paypal-transmission-time",
+        "access-control-allow-headers": "authorization,content-type,paypal-auth-algo,paypal-cert-url,paypal-transmission-id,paypal-transmission-sig,paypal-transmission-time,x-aurora-token",
         "content-type": "application/json"
     });
     response.end(JSON.stringify(payload));

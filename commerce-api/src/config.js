@@ -21,6 +21,7 @@ export const config = {
     emailApiUrl: process.env.EMAIL_API_URL || "",
     emailApiToken: process.env.EMAIL_API_TOKEN || "",
     supportEmail: process.env.SUPPORT_EMAIL || "support@aurorahy.com",
+    auroraCloudIngestToken: process.env.AURORA_CLOUD_INGEST_TOKEN || "",
     dataDir: process.env.COMMERCE_DATA_DIR || defaultDataDir
 };
 

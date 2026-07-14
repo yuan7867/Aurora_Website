@@ -41,6 +41,7 @@ services:
       EMAIL_API_URL: ${EMAIL_API_URL}
       EMAIL_API_TOKEN: ${EMAIL_API_TOKEN}
       SUPPORT_EMAIL: ${SUPPORT_EMAIL}
+      AURORA_CLOUD_INGEST_TOKEN: ${AURORA_CLOUD_INGEST_TOKEN}
     volumes:
       - aurora-commerce-data:/app/data
     networks:
