@@ -18,6 +18,24 @@ Public sale SKUs:
 
 Retired SKUs are rejected and not mapped to a different product.
 
+## PayPal Subscriptions
+
+Official SKUs use PayPal recurring subscriptions, not one-time Order/Capture:
+
+- `aurora-mt5-monthly` -> `PAYPAL_MT5_MONTHLY_PLAN_ID`
+- `aurora-mt5-yearly` -> `PAYPAL_MT5_YEARLY_PLAN_ID`
+- `aurora-xau-monthly` -> `PAYPAL_XAU_MONTHLY_PLAN_ID`
+- `aurora-xau-yearly` -> `PAYPAL_XAU_YEARLY_PLAN_ID`
+
+Plan IDs are read only on the server from environment variables. The browser
+may send only the official SKU and customer contact fields. Missing Plan IDs
+return `503` and must not fall back to one-time PayPal Orders.
+
+`BILLING.SUBSCRIPTION.ACTIVATED` records subscription status only. License
+activation and renewal are triggered only by verified `PAYMENT.SALE.COMPLETED`
+webhooks after Commerce verifies the PayPal subscription details, Plan ID, SKU,
+amount and currency.
+
 ## Storage
 
 Payment and delivery idempotency use PostgreSQL:

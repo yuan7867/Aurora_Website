@@ -72,3 +72,69 @@ test("PAYMENT.CAPTURE.COMPLETED delivers with captureId as canonical payment id"
     assert.equal(purchase.paypal.amount, "199.00");
     assert.equal(purchase.paypal.currency, "USD");
 });
+
+test("BILLING.SUBSCRIPTION.ACTIVATED records status but does not deliver license", async () => {
+    let saleProcessed = false;
+    let statusProcessed = false;
+    const handler = createPayPalWebhookHandler({
+        verifyWebhook: async () => ({ ok: true }),
+        complete: async () => {
+            throw new Error("one-time delivery should not run");
+        },
+        markEvent: async ({ handler: eventHandler }) => eventHandler(),
+        processSale: async () => {
+            saleProcessed = true;
+        },
+        processStatus: async ({ status }) => {
+            statusProcessed = status === "ACTIVE";
+            return { status: "recorded" };
+        }
+    });
+
+    const result = await handler({
+        headers: {},
+        rawBody: "{}",
+        event: {
+            id: "WH-SUB-ACTIVE",
+            event_type: "BILLING.SUBSCRIPTION.ACTIVATED",
+            resource: {
+                id: "SUB-1"
+            }
+        }
+    });
+
+    assert.equal(result.status, "recorded");
+    assert.equal(statusProcessed, true);
+    assert.equal(saleProcessed, false);
+});
+
+test("PAYMENT.SALE.COMPLETED is the subscription payment trigger", async () => {
+    let saleProcessed = false;
+    const handler = createPayPalWebhookHandler({
+        verifyWebhook: async () => ({ ok: true }),
+        complete: async () => {
+            throw new Error("one-time delivery should not run");
+        },
+        markEvent: async ({ handler: eventHandler }) => eventHandler(),
+        processSale: async ({ event }) => {
+            saleProcessed = event.id === "WH-SALE";
+            return { status: "activated" };
+        }
+    });
+
+    const result = await handler({
+        headers: {},
+        rawBody: "{}",
+        event: {
+            id: "WH-SALE",
+            event_type: "PAYMENT.SALE.COMPLETED",
+            resource: {
+                id: "SALE-1",
+                billing_agreement_id: "SUB-1"
+            }
+        }
+    });
+
+    assert.equal(result.status, "activated");
+    assert.equal(saleProcessed, true);
+});

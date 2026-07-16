@@ -2,8 +2,8 @@ import { useState } from "react";
 
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
-import { createPayPalOrder } from "../services/commerceApi.js";
-import { buildPricingHref, canCreatePayPalOrder, getCheckoutProduct, readSelection, salesEnabled } from "../utils/productSelection.js";
+import { createPayPalSubscription } from "../services/commerceApi.js";
+import { buildPricingHref, canCreatePayPalSubscription, getCheckoutProduct, readSelection, salesEnabled } from "../utils/productSelection.js";
 
 import "../styles/customer.css";
 
@@ -30,7 +30,7 @@ function Checkout() {
             return;
         }
 
-        if (!canCreatePayPalOrder(checkoutProductId)) {
+        if (!canCreatePayPalSubscription(checkoutProductId)) {
             setStatus("unavailable");
             setError("Temporarily unavailable.");
             return;
@@ -39,7 +39,7 @@ function Checkout() {
         setStatus("loading");
 
         try {
-            const order = await createPayPalOrder({
+            const subscription = await createPayPalSubscription({
                 productId: checkoutProductId,
                 customer
             });
@@ -47,11 +47,11 @@ function Checkout() {
             globalThis.localStorage?.setItem("auroraCustomerName", customer.name);
             globalThis.localStorage?.setItem("auroraCustomerEmail", customer.email);
 
-            if (!order.approveUrl) {
-                throw new Error("PayPal approval URL was not returned.");
+            if (!subscription.approveUrl) {
+                throw new Error("PayPal subscription approval URL was not returned.");
             }
 
-            globalThis.location.assign(order.approveUrl);
+            globalThis.location.assign(subscription.approveUrl);
         } catch (checkoutError) {
             setStatus("error");
             setError(checkoutError.message);
@@ -67,8 +67,8 @@ function Checkout() {
                     <span className="customer-tag">Checkout</span>
                     <h1>{product ? "Confirm your Aurora order." : "Choose Product"}</h1>
                     <p>
-                        Review your selected product and subscription before continuing to PayPal. Each Aurora product
-                        is purchased separately and receives its own license.
+                        Review your selected product and recurring subscription before continuing to PayPal. Each
+                        Aurora product is purchased separately and receives its own license.
                     </p>
                     {paymentFailed && <p className="product-state">Payment was cancelled or failed. Please review and try again.</p>}
                     <div className="customer-actions">
@@ -93,15 +93,15 @@ function Checkout() {
                             <strong>{product?.subscription || "Choose Monthly or Yearly"}</strong>
                         </div>
                         <div className="trust-row">
-                            <span>Delivery</span>
-                            <strong>{product ? "License and download after PayPal success" : "Select a product before payment"}</strong>
+                            <span>Renewal</span>
+                            <strong>{product ? "Automatic renewal. Cancel anytime; access remains until end of paid period." : "Select a product before payment"}</strong>
                         </div>
                         <p>{product?.summary || "No payment can be started until a product is selected."}</p>
                     </article>
 
                     <article className="customer-card">
                         <span className="customer-tag">Next Steps</span>
-                        <h2>{salesEnabled ? "PayPal Checkout" : "Temporarily unavailable"}</h2>
+                        <h2>{salesEnabled ? "PayPal Subscription" : "Temporarily unavailable"}</h2>
                         <form className="customer-form" onSubmit={handlePayPalCheckout}>
                             <label>
                                 Customer Name
@@ -124,8 +124,8 @@ function Checkout() {
                                     disabled={!product || !salesEnabled}
                                 />
                             </label>
-                            <button className="customer-button" type="submit" disabled={status === "loading" || !canCreatePayPalOrder(checkoutProductId)}>
-                                {status === "loading" ? "Opening PayPal..." : salesEnabled ? "Continue to PayPal" : "Temporarily unavailable"}
+                            <button className="customer-button" type="submit" disabled={status === "loading" || !canCreatePayPalSubscription(checkoutProductId)}>
+                                {status === "loading" ? "Opening PayPal..." : salesEnabled ? "Start Subscription" : "Temporarily unavailable"}
                             </button>
                             {error && <p className="product-state">{error}</p>}
                         </form>

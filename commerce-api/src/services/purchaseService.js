@@ -68,6 +68,13 @@ function buildCustomerLicenseStatus(deliveryStatus) {
 export async function completePurchase({ productId, customer, paypal }) {
     const product = getCommerceProduct(productId);
 
+    if (product.paymentMode === "subscription") {
+        const error = new Error("Subscription products cannot be delivered through one-time PayPal capture.");
+        error.code = "SUBSCRIPTION_REQUIRED";
+        error.statusCode = 410;
+        throw error;
+    }
+
     assertCaptureCompleted(paypal);
     assertCaptureMatchesProduct(product, paypal);
 

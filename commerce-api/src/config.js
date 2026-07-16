@@ -9,6 +9,12 @@ export const config = {
     paypalClientId: process.env.PAYPAL_CLIENT_ID || "",
     paypalClientSecret: process.env.PAYPAL_CLIENT_SECRET || "",
     paypalWebhookId: process.env.PAYPAL_WEBHOOK_ID || "",
+    paypalPlanIds: {
+        "aurora-mt5-monthly": process.env.PAYPAL_MT5_MONTHLY_PLAN_ID || "",
+        "aurora-mt5-yearly": process.env.PAYPAL_MT5_YEARLY_PLAN_ID || "",
+        "aurora-xau-monthly": process.env.PAYPAL_XAU_MONTHLY_PLAN_ID || "",
+        "aurora-xau-yearly": process.env.PAYPAL_XAU_YEARLY_PLAN_ID || ""
+    },
     databaseUrl: process.env.DATABASE_URL || "",
     jwtSecret: process.env.JWT_SECRET || "CHANGE_ME_LOCAL_JWT_SECRET",
     websiteBaseUrl: process.env.WEBSITE_BASE_URL || "http://localhost:5173",

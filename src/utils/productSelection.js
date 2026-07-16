@@ -150,6 +150,6 @@ export function getCheckoutProduct(sku) {
     return checkoutProducts[sku] || null;
 }
 
-export function canCreatePayPalOrder(sku) {
+export function canCreatePayPalSubscription(sku) {
     return Boolean(salesEnabled && getCheckoutProduct(sku));
 }

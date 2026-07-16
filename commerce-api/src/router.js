@@ -4,6 +4,11 @@ import { config } from "./config.js";
 import { getCommerceProduct, isProductSalesEnabled } from "./products.js";
 import { completePurchase, revealLicenseForCustomer } from "./services/purchaseService.js";
 import {
+    cancelOwnedSubscription,
+    createSubscriptionCheckout,
+    getSafeSubscriptionStatus
+} from "./services/subscriptionService.js";
+import {
     getAuthenticatedCustomer,
     loginCustomer,
     registerCustomer,
@@ -232,6 +237,15 @@ export async function commerceRouter(request, response) {
             const payload = await readJsonBody(request);
             const product = getCommerceProduct(payload.productId);
 
+            if (product.paymentMode === "subscription") {
+                sendJson(response, 410, {
+                    status: "disabled",
+                    code: "SUBSCRIPTION_REQUIRED",
+                    message: "This product requires PayPal subscription checkout."
+                });
+                return;
+            }
+
             if (!isProductSalesEnabled(product, config)) {
                 sendJson(response, 503, {
                     status: "unavailable",
@@ -256,6 +270,58 @@ export async function commerceRouter(request, response) {
             sendJson(response, error.statusCode || 400, {
                 status: "error",
                 code: error.code || "CHECKOUT_ERROR",
+                message: error.message
+            });
+        }
+        return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/paypal/subscriptions") {
+        try {
+            const payload = await readJsonBody(request);
+            const result = await createSubscriptionCheckout({
+                productId: payload.productId,
+                customer: payload.customer || {}
+            });
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, {
+                status: "error",
+                code: error.code || "SUBSCRIPTION_ERROR",
+                message: error.message
+            });
+        }
+        return;
+    }
+
+    if (request.method === "GET" && url.pathname.startsWith("/paypal/subscriptions/") && url.pathname.endsWith("/status")) {
+        try {
+            const [, , , subscriptionId] = url.pathname.split("/");
+            const result = await getSafeSubscriptionStatus(subscriptionId);
+            sendJson(response, 200, {
+                status: "ok",
+                subscription: result
+            });
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, {
+                status: "error",
+                message: error.message
+            });
+        }
+        return;
+    }
+
+    if (request.method === "POST" && url.pathname.startsWith("/paypal/subscriptions/") && url.pathname.endsWith("/cancel")) {
+        try {
+            const [, , , subscriptionId] = url.pathname.split("/");
+            const result = await cancelOwnedSubscription({
+                authorization: request.headers.authorization,
+                subscriptionId
+            });
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, {
+                status: "error",
                 message: error.message
             });
         }

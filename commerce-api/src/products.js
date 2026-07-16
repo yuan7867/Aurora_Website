@@ -8,7 +8,9 @@ export const commerceProducts = {
         plan: "monthly",
         durationDays: 30,
         productFamily: "MT5",
-        downloadProduct: "MT5"
+        downloadProduct: "MT5",
+        billingCycle: "MONTH",
+        paymentMode: "subscription"
     },
     "aurora-mt5-yearly": {
         productId: "aurora-mt5-yearly",
@@ -19,7 +21,9 @@ export const commerceProducts = {
         plan: "yearly",
         durationDays: 365,
         productFamily: "MT5",
-        downloadProduct: "MT5"
+        downloadProduct: "MT5",
+        billingCycle: "YEAR",
+        paymentMode: "subscription"
     },
     "aurora-xau-monthly": {
         productId: "aurora-xau-monthly",
@@ -30,7 +34,9 @@ export const commerceProducts = {
         plan: "monthly",
         durationDays: 30,
         productFamily: "XAU",
-        downloadProduct: "XAU"
+        downloadProduct: "XAU",
+        billingCycle: "MONTH",
+        paymentMode: "subscription"
     },
     "aurora-xau-yearly": {
         productId: "aurora-xau-yearly",
@@ -41,7 +47,9 @@ export const commerceProducts = {
         plan: "yearly",
         durationDays: 365,
         productFamily: "XAU",
-        downloadProduct: "XAU"
+        downloadProduct: "XAU",
+        billingCycle: "YEAR",
+        paymentMode: "subscription"
     }
 };
 
@@ -80,4 +88,29 @@ export function isProductSalesEnabled(product, config) {
     }
 
     return false;
+}
+
+export function getPayPalPlanId(product, config) {
+    return config.paypalPlanIds?.[product.productId] || "";
+}
+
+export function assertProductSubscriptionAvailable(product, config) {
+    if (!isProductSalesEnabled(product, config)) {
+        const error = new Error("This Aurora product is temporarily unavailable.");
+        error.code = "PRODUCT_NOT_AVAILABLE";
+        error.statusCode = 503;
+        throw error;
+    }
+
+    if (!getPayPalPlanId(product, config)) {
+        const error = new Error("PayPal subscription plan is not configured for this product.");
+        error.code = "PAYPAL_PLAN_NOT_CONFIGURED";
+        error.statusCode = 503;
+        throw error;
+    }
+}
+
+export function getProductByPayPalPlanId(planId, config) {
+    const entry = Object.entries(config.paypalPlanIds || {}).find(([, value]) => value && value === planId);
+    return entry ? getCommerceProduct(entry[0]) : null;
 }

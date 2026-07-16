@@ -4,7 +4,7 @@ import test from "node:test";
 import {
     buildCheckoutHref,
     buildSku,
-    canCreatePayPalOrder,
+    canCreatePayPalSubscription,
     commerceProducts,
     getCheckoutProduct,
     readSelection,
@@ -56,6 +56,6 @@ test("checkout product is unavailable without an exact SKU", () => {
 
 test("sales disabled prevents frontend checkout order creation", () => {
     assert.equal(salesEnabled, false);
-    assert.equal(canCreatePayPalOrder("aurora-mt5-monthly"), false);
-    assert.equal(canCreatePayPalOrder("aurora-xau-yearly"), false);
+    assert.equal(canCreatePayPalSubscription("aurora-mt5-monthly"), false);
+    assert.equal(canCreatePayPalSubscription("aurora-xau-yearly"), false);
 });

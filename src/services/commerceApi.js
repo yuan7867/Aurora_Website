@@ -20,15 +20,19 @@ async function requestCommerce(path, options = {}) {
     return data;
 }
 
-export async function createPayPalOrder({ productId, customer }) {
-    return requestCommerce("/paypal/orders", {
+export async function createPayPalSubscription({ productId, customer }) {
+    return requestCommerce("/paypal/subscriptions", {
         method: "POST",
         body: JSON.stringify({ productId, customer })
     });
 }
 
-export async function capturePayPalOrder(orderId) {
-    return requestCommerce(`/paypal/orders/${encodeURIComponent(orderId)}/capture`, {
+export async function getPayPalSubscriptionStatus(subscriptionId) {
+    return requestCommerce(`/paypal/subscriptions/${encodeURIComponent(subscriptionId)}/status`);
+}
+
+export async function cancelPayPalSubscription(subscriptionId) {
+    return requestCommerce(`/paypal/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`, {
         method: "POST"
     });
 }
