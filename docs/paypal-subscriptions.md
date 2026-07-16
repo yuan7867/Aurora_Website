@@ -29,6 +29,10 @@ PAYPAL_XAU_MONTHLY_PLAN_ID=
 PAYPAL_XAU_YEARLY_PLAN_ID=
 ```
 
+These variables must be passed into the `aurora-commerce-api` container through
+Docker Compose. Leave them empty while `MT5_SALES_ENABLED=false` and
+`XAU_SALES_ENABLED=false`; startup must still succeed.
+
 Provisioning safety:
 
 - Default to Sandbox.

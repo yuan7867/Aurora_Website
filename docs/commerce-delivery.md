@@ -31,10 +31,22 @@ Plan IDs are read only on the server from environment variables. The browser
 may send only the official SKU and customer contact fields. Missing Plan IDs
 return `503` and must not fall back to one-time PayPal Orders.
 
+Commerce receives all four PayPal Plan ID variables through
+`aurora-commerce-api.environment` in `docker-compose.yml`. With both sales
+switches set to `false`, empty Plan IDs do not block migration or startup.
+
 `BILLING.SUBSCRIPTION.ACTIVATED` records subscription status only. License
 activation and renewal are triggered only by verified `PAYMENT.SALE.COMPLETED`
 webhooks after Commerce verifies the PayPal subscription details, Plan ID, SKU,
 amount and currency.
+
+XAU subscription lifecycle calls stay inside the Docker network. The configured
+URL must use the internal host `xau-license-api:8000`; the client rewrites the
+path to:
+
+- `POST /api/v1/subscriptions/activate`
+- `POST /api/v1/subscriptions/renew`
+- `POST /api/v1/subscriptions/status`
 
 ## Storage
 
