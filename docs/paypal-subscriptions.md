@@ -44,3 +44,50 @@ Provisioning safety:
 
 Commerce uses server-side SKU to Plan ID mapping. Browser-provided Plan IDs,
 prices, durations, or license product IDs are ignored.
+
+## Required Webhook Events
+
+Configure the Aurora Commerce webhook to receive these PayPal events:
+
+- `BILLING.SUBSCRIPTION.ACTIVATED`
+- `BILLING.SUBSCRIPTION.UPDATED`
+- `BILLING.SUBSCRIPTION.CANCELLED`
+- `BILLING.SUBSCRIPTION.SUSPENDED`
+- `BILLING.SUBSCRIPTION.EXPIRED`
+- `BILLING.SUBSCRIPTION.PAYMENT.FAILED`
+- `PAYMENT.SALE.COMPLETED`
+- `PAYMENT.SALE.REFUNDED`
+- `PAYMENT.SALE.REVERSED`
+
+Rules:
+
+- `BILLING.SUBSCRIPTION.ACTIVATED` records status only and must not issue a
+  License.
+- Only `PAYMENT.SALE.COMPLETED` can trigger first License activation or renewal.
+- `PAYMENT.SALE.REFUNDED` and `PAYMENT.SALE.REVERSED` move the subscription into
+  suspended/manual review handling.
+
+## CLI Usage
+
+Dry-run Sandbox preview:
+
+```bash
+npm run paypal:provision
+```
+
+Create Sandbox Products and Plans:
+
+```bash
+npm run paypal:provision -- --confirm
+```
+
+Create Production Products and Plans only after final approval:
+
+```bash
+npm run paypal:provision -- --production --confirm
+```
+
+The CLI prints the four Plan ID environment variable assignments. It does not
+write `.env`, Client Secret, access tokens, or authorization headers to files or
+logs. Do not repeatedly run Production provisioning unless you intentionally
+want a new set of PayPal Products and Plans.
