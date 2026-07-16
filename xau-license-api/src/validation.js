@@ -1,4 +1,4 @@
-import { PLAN_RULES, PRODUCT_ID } from "./constants.js";
+import { PLAN_RULES, PRODUCT_ID, SUBSCRIPTION_STATUSES } from "./constants.js";
 import { badRequest, conflict } from "./errors.js";
 import { normalizeEmail } from "./security.js";
 
@@ -12,16 +12,17 @@ function assertString(value, name, required = true) {
   return value.trim();
 }
 
-export function validateIssuePayload(payload) {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    throw badRequest("invalid_json", "Request body must be a JSON object.");
+function assertIso(value, name) {
+  const text = assertString(value, name);
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) {
+    throw badRequest("invalid_timestamp", `${name} must be a UTC ISO timestamp.`);
   }
+  return date.toISOString();
+}
 
-  const productId = assertString(payload.productId, "productId");
-  const sku = assertString(payload.sku, "sku");
-  const plan = assertString(payload.plan, "plan");
+function assertPlanMatch({ productId, sku, plan }) {
   const rule = PLAN_RULES[plan];
-
   if (productId !== PRODUCT_ID) {
     throw badRequest("invalid_product", "productId must be AURORA-XAU-AI.");
   }
@@ -31,6 +32,27 @@ export function validateIssuePayload(payload) {
   if (rule.sku !== sku) {
     throw conflict("sku_plan_mismatch", "sku does not match plan.");
   }
+  return rule;
+}
+
+function validateSubscriptionMoney(rule, paypal) {
+  const amount = assertString(paypal.amount, "paypal.amount");
+  const currency = assertString(paypal.currency, "paypal.currency");
+  if (amount !== rule.amount || currency !== rule.currency) {
+    throw conflict("subscription_money_mismatch", "amount or currency does not match plan.");
+  }
+  return { amount, currency };
+}
+
+export function validateIssuePayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw badRequest("invalid_json", "Request body must be a JSON object.");
+  }
+
+  const productId = assertString(payload.productId, "productId");
+  const sku = assertString(payload.sku, "sku");
+  const plan = assertString(payload.plan, "plan");
+  const rule = assertPlanMatch({ productId, sku, plan });
 
   const customer = payload.customer || {};
   const email = normalizeEmail(customer.email);
@@ -62,6 +84,89 @@ export function validateIssuePayload(payload) {
     paypalEventId: assertString(paypal.eventId, "paypal.eventId", false),
     paypalStatus: status,
     idempotencyKey
+  };
+}
+
+export function validateSubscriptionActivatePayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw badRequest("invalid_json", "Request body must be a JSON object.");
+  }
+
+  const productId = assertString(payload.productId, "productId");
+  const sku = assertString(payload.sku, "sku");
+  const plan = assertString(payload.plan, "plan");
+  const rule = assertPlanMatch({ productId, sku, plan });
+  const customer = payload.customer || {};
+  const customerEmail = normalizeEmail(customer.email);
+  if (!customerEmail || !customerEmail.includes("@")) {
+    throw badRequest("invalid_customer_email", "customer.email is required.");
+  }
+  const paypal = payload.paypal || {};
+  const subscriptionId = assertString(paypal.subscriptionId, "paypal.subscriptionId");
+  const saleId = assertString(paypal.saleId, "paypal.saleId");
+  const idempotencyKey = assertString(payload.idempotencyKey, "idempotencyKey");
+  const status = assertString(paypal.status, "paypal.status");
+  if (status !== "ACTIVE") {
+    throw badRequest("invalid_subscription_status", "paypal.status must be ACTIVE.");
+  }
+  if (idempotencyKey !== saleId) {
+    throw badRequest("invalid_idempotency_key", "idempotencyKey must equal paypal.saleId.");
+  }
+  const money = validateSubscriptionMoney(rule, paypal);
+  const periodStart = assertIso(paypal.periodStart, "paypal.periodStart");
+  const periodEnd = assertIso(paypal.periodEnd, "paypal.periodEnd");
+  if (new Date(periodEnd).getTime() <= new Date(periodStart).getTime()) {
+    throw badRequest("invalid_period", "periodEnd must be after periodStart.");
+  }
+
+  return {
+    productId,
+    sku,
+    plan,
+    days: rule.days,
+    customerEmail,
+    customerName: typeof customer.name === "string" ? customer.name.trim() : "",
+    paypalSubscriptionId: subscriptionId,
+    paypalPlanId: assertString(paypal.planId, "paypal.planId"),
+    paypalSaleId: saleId,
+    paypalEventId: assertString(paypal.eventId, "paypal.eventId", false),
+    subscriptionStatus: status,
+    amount: money.amount,
+    currency: money.currency,
+    paidAt: assertIso(paypal.paidAt, "paypal.paidAt"),
+    periodStart,
+    periodEnd,
+    idempotencyKey
+  };
+}
+
+export function validateSubscriptionRenewPayload(payload) {
+  const renew = validateSubscriptionActivatePayload(payload);
+  return renew;
+}
+
+export function validateSubscriptionStatusPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw badRequest("invalid_json", "Request body must be a JSON object.");
+  }
+  const productId = assertString(payload.productId, "productId", false) || PRODUCT_ID;
+  if (productId !== PRODUCT_ID) {
+    throw badRequest("invalid_product", "productId must be AURORA-XAU-AI.");
+  }
+  const paypal = payload.paypal || {};
+  const subscriptionId = assertString(paypal.subscriptionId, "paypal.subscriptionId");
+  const eventId = assertString(paypal.eventId, "paypal.eventId");
+  const status = assertString(paypal.status, "paypal.status");
+  if (!SUBSCRIPTION_STATUSES.has(status)) {
+    throw badRequest("invalid_subscription_status", "Unsupported subscription status.");
+  }
+  return {
+    productId,
+    paypalSubscriptionId: subscriptionId,
+    paypalEventId: eventId,
+    status,
+    eventTime: assertIso(paypal.eventTime || payload.eventTime || new Date().toISOString(), "paypal.eventTime"),
+    reason: assertString(paypal.reason || payload.reason, "reason", false)
   };
 }
 

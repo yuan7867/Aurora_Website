@@ -2,7 +2,13 @@ import { MAX_BODY_BYTES } from "./constants.js";
 import { ApiError, badRequest } from "./errors.js";
 import { RateLimiter } from "./rateLimit.js";
 import { bearerToken, constantTimeEquals, generateLicenseKey, hmacLicenseKey } from "./security.js";
-import { validateBotPayload, validateIssuePayload } from "./validation.js";
+import {
+  validateBotPayload,
+  validateIssuePayload,
+  validateSubscriptionActivatePayload,
+  validateSubscriptionRenewPayload,
+  validateSubscriptionStatusPayload
+} from "./validation.js";
 
 async function readJson(request) {
   const chunks = [];
@@ -45,12 +51,17 @@ function botLicenseResponse(result) {
     };
   }
 
-  return {
+  const response = {
     valid: true,
     plan: result.license.plan,
     expires_at: result.license.expiresAt ? new Date(result.license.expiresAt).toISOString() : "",
     support: {}
   };
+  if (result.license.subscriptionStatus) {
+    response.subscription_status = result.license.subscriptionStatus;
+    response.grace_until = result.license.graceUntil ? new Date(result.license.graceUntil).toISOString() : "";
+  }
+  return response;
 }
 
 export function createApp({ config, store, logger }) {
@@ -120,6 +131,86 @@ export function createApp({ config, store, logger }) {
     sendJson(response, 200, botLicenseResponse(result));
   }
 
+  function authorizeInternal(request, response) {
+    const token = bearerToken(request.headers);
+    if (!constantTimeEquals(token, config.internalToken)) {
+      sendJson(response, 401, {
+        status: "error",
+        code: "unauthorized"
+      });
+      return false;
+    }
+    return true;
+  }
+
+  async function activateSubscription(request, response) {
+    if (!authorizeInternal(request, response)) {
+      return;
+    }
+    const payload = await readJson(request);
+    const subscription = validateSubscriptionActivatePayload(payload);
+    const rawLicenseKey = generateLicenseKey();
+    const result = await store.activateSubscription({
+      ...subscription,
+      licenseKeyHash: hmacLicenseKey(rawLicenseKey, config.licenseKeyPepper)
+    });
+    if (result.alreadyProcessed) {
+      sendJson(response, 200, {
+        status: "activated",
+        licenseId: String(result.license.id),
+        subscriptionId: result.license.paypalSubscriptionId,
+        plan: result.license.plan,
+        expiresAt: result.license.expiresAt ? new Date(result.license.expiresAt).toISOString() : "",
+        alreadyProcessed: true,
+        licenseKeyReadable: false
+      });
+      return;
+    }
+    sendJson(response, 200, {
+      status: "activated",
+      licenseKey: rawLicenseKey,
+      licenseId: String(result.license.id),
+      subscriptionId: result.license.paypalSubscriptionId,
+      productId: result.license.productId,
+      sku: result.license.sku,
+      plan: result.license.plan,
+      expiresAt: result.license.expiresAt ? new Date(result.license.expiresAt).toISOString() : "",
+      alreadyProcessed: false
+    });
+  }
+
+  async function renewSubscription(request, response) {
+    if (!authorizeInternal(request, response)) {
+      return;
+    }
+    const payload = await readJson(request);
+    const subscription = validateSubscriptionRenewPayload(payload);
+    const result = await store.renewSubscription(subscription);
+    sendJson(response, 200, {
+      status: "renewed",
+      licenseId: String(result.license.id),
+      subscriptionId: result.license.paypalSubscriptionId,
+      plan: result.license.plan,
+      expiresAt: result.license.expiresAt ? new Date(result.license.expiresAt).toISOString() : "",
+      alreadyProcessed: result.alreadyProcessed
+    });
+  }
+
+  async function updateSubscriptionStatus(request, response) {
+    if (!authorizeInternal(request, response)) {
+      return;
+    }
+    const payload = await readJson(request);
+    const status = validateSubscriptionStatusPayload(payload);
+    const result = await store.updateSubscriptionStatus(status);
+    sendJson(response, 200, {
+      status: result.ignored ? "ignored" : "updated",
+      subscriptionId: status.paypalSubscriptionId,
+      alreadyProcessed: result.alreadyProcessed,
+      subscriptionStatus: result.license?.subscriptionStatus
+    });
+  }
+
   return async function handler(request, response) {
     const url = new URL(request.url, "http://localhost");
 
@@ -141,6 +232,21 @@ export function createApp({ config, store, logger }) {
 
       if (request.method === "POST" && url.pathname === "/api/v1/licenses/issue") {
         await issueLicense(request, response);
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/v1/subscriptions/activate") {
+        await activateSubscription(request, response);
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/v1/subscriptions/renew") {
+        await renewSubscription(request, response);
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/v1/subscriptions/status") {
+        await updateSubscriptionStatus(request, response);
         return;
       }
 
