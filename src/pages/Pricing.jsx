@@ -2,66 +2,39 @@ import { useMemo, useState } from "react";
 
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
+import {
+    buildCheckoutHref,
+    buildPricingHref,
+    commerceProducts,
+    readSelection,
+    subscriptions
+} from "../utils/productSelection.js";
 
 import "../styles/customer.css";
 
-const products = [
-    {
-        id: "aurora-mt5",
-        name: "Aurora MT5 AI Trader",
-        profile: "Conservative Strategy",
-        summary: "Built for disciplined traders who prioritize risk control, consistency and long-term execution.",
-        future: false
-    },
-    {
-        id: "aurora-xau",
-        name: "Aurora XAU AI Trader",
-        profile: "Aggressive Strategy",
-        summary: "Built for traders seeking higher opportunity with active XAU execution logic.",
-        future: false
-    },
-    {
-        id: "aurora-bundle",
-        name: "Aurora Bundle",
-        profile: "MT5 + XAU",
-        summary: "A unified Aurora trading package for customers who want both strategy profiles.",
-        future: false
-    },
-    {
-        id: "future-products",
-        name: "Future Products",
-        profile: "Moomoo, Luno, Event Trader",
-        summary: "The pricing structure is prepared for future Aurora products as they become commercial.",
-        future: true
-    }
-];
-
-const subscriptions = [
-    {
-        id: "monthly",
-        name: "Monthly",
-        price: "USD 19.90",
-        note: "Best for getting started",
-        billing: "Billed monthly"
-    },
-    {
-        id: "yearly",
-        name: "Yearly",
-        price: "USD 199",
-        note: "Most Popular",
-        billing: "Yearly Save 17%"
-    }
-];
-
 function Pricing() {
-    const initialProduct = new URLSearchParams(globalThis.location.search).get("product");
-    const [selectedProduct, setSelectedProduct] = useState(initialProduct === "aurora-xau" ? "aurora-xau" : "aurora-mt5");
-    const [selectedSubscription, setSelectedSubscription] = useState("yearly");
+    const initialSelection = readSelection(globalThis.location.search);
+    const [selectedProduct, setSelectedProduct] = useState(initialSelection.productId);
+    const [selectedSubscription, setSelectedSubscription] = useState(initialSelection.planId);
 
     const checkoutHref = useMemo(
-        () => `/checkout?sku=${encodeURIComponent(`${selectedProduct}-${selectedSubscription}`)}`,
+        () => buildCheckoutHref(selectedProduct, selectedSubscription),
         [selectedProduct, selectedSubscription]
     );
+
+    function updateSelection(productId, planId = selectedSubscription) {
+        const href = buildPricingHref(productId, planId);
+        setSelectedProduct(productId);
+        setSelectedSubscription(planId);
+        globalThis.history?.replaceState(null, "", href);
+    }
+
+    function updateSubscription(planId) {
+        setSelectedSubscription(planId);
+        if (selectedProduct) {
+            globalThis.history?.replaceState(null, "", buildPricingHref(selectedProduct, planId));
+        }
+    }
 
     return (
         <>
@@ -72,11 +45,15 @@ function Pricing() {
                     <span className="customer-tag">Pricing</span>
                     <h1>Choose product. Choose subscription. Start trading.</h1>
                     <p>
-                        Aurora pricing is structured around the product first, then the subscription. Checkout,
-                        license delivery, downloads and customer access continue through the commercial flow.
+                        Choose one Aurora trading system, then select Monthly or Yearly access. Each product is
+                        purchased separately with its own license and download delivery.
                     </p>
                     <div className="customer-actions">
-                        <a className="customer-button" href={checkoutHref}>Continue to Checkout</a>
+                        {checkoutHref ? (
+                            <a className="customer-button" href={checkoutHref}>Continue to Checkout</a>
+                        ) : (
+                            <span className="customer-button is-disabled" aria-disabled="true">Choose Product</span>
+                        )}
                         <a className="customer-button secondary" href="/book-demo">Book Demo</a>
                     </div>
                 </section>
@@ -93,13 +70,12 @@ function Pricing() {
                         <h2>Choose Product</h2>
                     </div>
                     <div className="customer-grid pricing-product-grid">
-                        {products.map((product) => (
+                        {commerceProducts.map((product) => (
                             <button
                                 type="button"
                                 className={`customer-card pricing-choice ${selectedProduct === product.id ? "is-selected" : ""}`}
                                 key={product.id}
-                                onClick={() => !product.future && setSelectedProduct(product.id)}
-                                disabled={product.future}
+                                onClick={() => updateSelection(product.id)}
                             >
                                 <span className="customer-tag">{product.profile}</span>
                                 <h3>{product.name}</h3>
@@ -120,7 +96,8 @@ function Pricing() {
                                 type="button"
                                 className={`customer-card pricing-choice ${selectedSubscription === subscription.id ? "is-selected" : ""}`}
                                 key={subscription.id}
-                                onClick={() => setSelectedSubscription(subscription.id)}
+                                onClick={() => updateSubscription(subscription.id)}
+                                disabled={!selectedProduct}
                             >
                                 <span className="customer-tag">{subscription.note}</span>
                                 <h3>{subscription.name}</h3>
@@ -134,14 +111,20 @@ function Pricing() {
                 </section>
 
                 <section className="customer-note" aria-label="Selected purchase path">
-                    <h2>Your Aurora order path is ready.</h2>
+                    <h2>{selectedProduct ? "Your Aurora order path is ready." : "Choose Product"}</h2>
                     <p>
                         Product and subscription are selected before checkout, so the commercial journey is clear:
                         product decision, PayPal payment, receipt, license, download and dashboard access.
                     </p>
-                    <a className="customer-button" href={checkoutHref}>
-                        Continue to Checkout
-                    </a>
+                    {checkoutHref ? (
+                        <a className="customer-button" href={checkoutHref}>
+                            Continue to Checkout
+                        </a>
+                    ) : (
+                        <span className="customer-button is-disabled" aria-disabled="true">
+                            Choose Product
+                        </span>
+                    )}
                 </section>
             </main>
 

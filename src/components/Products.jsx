@@ -144,7 +144,7 @@ function Products() {
                         </div>
 
                         <div className="product-actions">
-                            <a href={product.checkout} className="product-buy">Buy Now</a>
+                            <a href={product.checkout} className="product-buy">Choose Plan</a>
                             <button
                                 type="button"
                                 className="product-learn"

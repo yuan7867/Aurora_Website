@@ -4,7 +4,7 @@ const tiers = [
     {
         name: "Choose Product",
         price: "USD 19.90",
-        summary: "Start from MT5, XAU, or Aurora Bundle before selecting subscription.",
+        summary: "Choose Aurora MT5 AI Trader or Aurora XAU Trader before selecting subscription.",
         href: "/pricing"
     },
     {
@@ -29,7 +29,7 @@ function HomePricing() {
                         <span>{tier.name}</span>
                         <strong>{tier.price}</strong>
                         <p>{tier.summary}</p>
-                        <a href={tier.href}>Buy Now</a>
+                        <a href={tier.href}>Choose Plan</a>
                     </article>
                 ))}
             </div>
