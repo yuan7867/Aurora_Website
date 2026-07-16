@@ -7,14 +7,14 @@ import "../styles/customer.css";
 
 const products = [
     {
-        id: "aurora-mt5-ai",
+        id: "aurora-mt5",
         name: "Aurora MT5 AI Trader",
         profile: "Conservative Strategy",
         summary: "Built for disciplined traders who prioritize risk control, consistency and long-term execution.",
         future: false
     },
     {
-        id: "aurora-xau-trader",
+        id: "aurora-xau",
         name: "Aurora XAU AI Trader",
         profile: "Aggressive Strategy",
         summary: "Built for traders seeking higher opportunity with active XAU execution logic.",
@@ -54,11 +54,12 @@ const subscriptions = [
 ];
 
 function Pricing() {
-    const [selectedProduct, setSelectedProduct] = useState("aurora-mt5-ai");
+    const initialProduct = new URLSearchParams(globalThis.location.search).get("product");
+    const [selectedProduct, setSelectedProduct] = useState(initialProduct === "aurora-xau" ? "aurora-xau" : "aurora-mt5");
     const [selectedSubscription, setSelectedSubscription] = useState("yearly");
 
     const checkoutHref = useMemo(
-        () => `/checkout?product=${encodeURIComponent(selectedProduct)}&plan=${encodeURIComponent(selectedSubscription)}`,
+        () => `/checkout?sku=${encodeURIComponent(`${selectedProduct}-${selectedSubscription}`)}`,
         [selectedProduct, selectedSubscription]
     );
 

@@ -10,6 +10,9 @@ risk, martingale, or learning logic.
 
 `POST /api/v1/licenses/issue`
 
+This endpoint is an internal Docker-network API for Aurora Commerce only. It is
+not exposed by the public Nginx configuration.
+
 Headers:
 
 - `Authorization: Bearer ${LICENSE_API_INTERNAL_TOKEN}`
@@ -82,6 +85,9 @@ Idempotent retry response:
 
 This endpoint is compatible with the current `mt5_xau_long_martingale.py`
 payload. The bot does not need to change.
+
+Production Nginx exposes this route publicly as `/api/xau-bot/license` and
+proxies it to the internal `xau-license-api` container.
 
 Success:
 

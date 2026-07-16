@@ -51,7 +51,7 @@ const products = [
         theme: "blue",
         subtitle: "Built for long-term disciplined traders.",
         productId: "mt5",
-        checkout: "/pricing?product=aurora-mt5-ai",
+        checkout: "/pricing?product=aurora-mt5",
         price: "USD 19.90",
         billing: "Monthly subscription available",
         features: [
@@ -79,7 +79,7 @@ const products = [
         theme: "gold",
         subtitle: "Built for traders seeking maximum opportunity.",
         productId: "xau",
-        checkout: "/pricing?product=aurora-xau-trader",
+        checkout: "/pricing?product=aurora-xau",
         price: "USD 19.90",
         billing: "Monthly subscription available",
         features: [

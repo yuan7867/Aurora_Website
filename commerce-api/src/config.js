@@ -9,6 +9,7 @@ export const config = {
     paypalClientId: process.env.PAYPAL_CLIENT_ID || "",
     paypalClientSecret: process.env.PAYPAL_CLIENT_SECRET || "",
     paypalWebhookId: process.env.PAYPAL_WEBHOOK_ID || "",
+    databaseUrl: process.env.DATABASE_URL || "",
     jwtSecret: process.env.JWT_SECRET || "CHANGE_ME_LOCAL_JWT_SECRET",
     websiteBaseUrl: process.env.WEBSITE_BASE_URL || "http://localhost:5173",
     mt5LicenseApiUrl: process.env.MT5_LICENSE_API_URL || "",
@@ -22,8 +23,20 @@ export const config = {
     emailApiToken: process.env.EMAIL_API_TOKEN || "",
     supportEmail: process.env.SUPPORT_EMAIL || "support@aurorahy.com",
     auroraCloudIngestToken: process.env.AURORA_CLOUD_INGEST_TOKEN || "",
+    licenseDeliveryEncryptionKey: process.env.LICENSE_DELIVERY_ENCRYPTION_KEY || "",
+    mt5SalesEnabled: process.env.MT5_SALES_ENABLED === "true",
+    xauSalesEnabled: process.env.XAU_SALES_ENABLED === "true",
     dataDir: process.env.COMMERCE_DATA_DIR || defaultDataDir
 };
+
+export function assertCommerceRuntimeConfigured() {
+    if (!config.databaseUrl) {
+        throw new Error("DATABASE_URL is required.");
+    }
+    if (!config.licenseDeliveryEncryptionKey) {
+        throw new Error("LICENSE_DELIVERY_ENCRYPTION_KEY is required.");
+    }
+}
 
 export function getPayPalBaseUrl() {
     return config.paypalEnvironment === "production"

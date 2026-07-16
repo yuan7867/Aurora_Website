@@ -12,8 +12,7 @@ async function readStore() {
     } catch (error) {
         if (error.code === "ENOENT") {
             return {
-                customers: {},
-                processedPayments: {}
+                customers: {}
             };
         }
 
@@ -49,11 +48,6 @@ export async function saveCustomer(customer) {
     return store.customers[email];
 }
 
-export async function hasProcessedPayment(paymentId) {
-    const store = await readStore();
-    return Boolean(store.processedPayments[paymentId]);
-}
-
 export async function savePurchase({ customer, product, paypal, license, downloadLink, emailResult }) {
     const store = await readStore();
     const email = String(customer.email || "").toLowerCase();
@@ -77,8 +71,6 @@ export async function savePurchase({ customer, product, paypal, license, downloa
     };
 
     const now = new Date().toISOString();
-    const licenseKey = license?.licenseKey || license?.license_key || license?.key || license?.data?.licenseKey || null;
-
     existingCustomer.name = customer.name || existingCustomer.name;
     existingCustomer.products = upsertById(existingCustomer.products, product.productId, {
         id: product.productId,
@@ -89,9 +81,11 @@ export async function savePurchase({ customer, product, paypal, license, downloa
     existingCustomer.licenses = upsertById(existingCustomer.licenses, product.productId, {
         id: product.productId,
         productName: product.name,
-        status: licenseKey ? "Issued" : "Pending",
-        licenseKey,
-        raw: license,
+        status: license?.status || "Issued",
+        licenseKey: null,
+        deliveryStatus: license?.deliveryStatus || "delivered",
+        licenseProductId: product.licenseProductId,
+        plan: product.plan,
         issuedAt: now
     });
     existingCustomer.downloads = upsertById(existingCustomer.downloads, product.productId, {
@@ -107,15 +101,12 @@ export async function savePurchase({ customer, product, paypal, license, downloa
         productId: product.productId,
         status: paypal.status,
         createdAt: now,
-        email: emailResult
+        email: {
+            status: emailResult?.status || "unknown"
+        }
     });
 
     store.customers[email] = existingCustomer;
-    store.processedPayments[paypal.paymentId] = {
-        email,
-        productId: product.productId,
-        processedAt: now
-    };
 
     await writeStore(store);
     return existingCustomer;

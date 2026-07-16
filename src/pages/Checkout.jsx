@@ -7,47 +7,44 @@ import { createPayPalOrder } from "../services/commerceApi.js";
 import "../styles/customer.css";
 
 const products = {
-    "aurora-mt5-ai": {
+    "aurora-mt5-monthly": {
         name: "Aurora MT5 AI Trader",
         strategy: "Conservative Strategy",
-        summary: "Disciplined MT5 execution for long-term traders."
+        summary: "Disciplined MT5 execution for long-term traders.",
+        subscription: "Monthly",
+        price: "USD 19.90",
+        license: "Monthly subscription"
     },
-    "aurora-xau-trader": {
+    "aurora-mt5-yearly": {
+        name: "Aurora MT5 AI Trader",
+        strategy: "Conservative Strategy",
+        summary: "Disciplined MT5 execution for long-term traders.",
+        subscription: "Yearly",
+        price: "USD 199",
+        license: "Yearly subscription. Save 17%"
+    },
+    "aurora-xau-monthly": {
         name: "Aurora XAU AI Trader",
         strategy: "Aggressive Strategy",
-        summary: "Active XAU strategy for maximum opportunity."
-    },
-    "aurora-bundle": {
-        name: "Aurora Bundle",
-        strategy: "MT5 + XAU",
-        summary: "Both Aurora trading systems under one customer journey."
-    }
-};
-
-const plans = {
-    monthly: {
-        name: "Monthly",
-        strategy: "Best for getting started",
+        summary: "Active XAU strategy for maximum opportunity.",
+        subscription: "Monthly",
         price: "USD 19.90",
-        license: "Monthly subscription",
-        productId: "aurora-monthly"
+        license: "Monthly subscription"
     },
-    yearly: {
-        name: "Yearly",
-        strategy: "Most Popular",
+    "aurora-xau-yearly": {
+        name: "Aurora XAU AI Trader",
+        strategy: "Aggressive Strategy",
+        summary: "Active XAU strategy for maximum opportunity.",
+        subscription: "Yearly",
         price: "USD 199",
-        license: "Yearly subscription. Save 17%",
-        productId: "aurora-yearly"
+        license: "Yearly subscription. Save 17%"
     }
 };
 
 function Checkout() {
     const params = new URLSearchParams(globalThis.location.search);
-    const planId = params.get("plan");
-    const productId = params.get("product") || "aurora-mt5-ai";
-    const selectedPlan = plans[planId] || plans.yearly;
-    const product = products[productId] || products["aurora-mt5-ai"];
-    const checkoutProductId = selectedPlan.productId;
+    const checkoutProductId = params.get("sku") || "aurora-mt5-yearly";
+    const product = products[checkoutProductId] || products["aurora-mt5-yearly"];
     const paymentFailed = params.get("payment") === "failed";
     const [customer, setCustomer] = useState({
         name: globalThis.localStorage?.getItem("auroraCustomerName") || "",
@@ -104,8 +101,8 @@ function Checkout() {
                         <span className="customer-tag">Order Summary</span>
                         <h2>{product.name}</h2>
                         <div className="price">
-                            {selectedPlan.price}
-                            <span> / {selectedPlan.license}</span>
+                            {product.price}
+                            <span> / {product.license}</span>
                         </div>
                         <div className="trust-row">
                             <span>Strategy</span>
@@ -113,7 +110,7 @@ function Checkout() {
                         </div>
                         <div className="trust-row">
                             <span>Subscription</span>
-                            <strong>{selectedPlan.name}</strong>
+                            <strong>{product.subscription}</strong>
                         </div>
                         <div className="trust-row">
                             <span>Delivery</span>

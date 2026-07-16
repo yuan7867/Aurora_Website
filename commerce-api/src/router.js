@@ -1,8 +1,8 @@
 import { handlePayPalWebhook } from "./handlers/webhookHandler.js";
 import { capturePayPalOrder, createPayPalOrder } from "./clients/paypalClient.js";
 import { config } from "./config.js";
-import { getCommerceProduct } from "./products.js";
-import { completePurchase } from "./services/purchaseService.js";
+import { getCommerceProduct, isProductSalesEnabled } from "./products.js";
+import { completePurchase, revealLicenseForCustomer } from "./services/purchaseService.js";
 import {
     getAuthenticatedCustomer,
     loginCustomer,
@@ -29,6 +29,7 @@ function readCapture(capturePayload) {
     const purchaseUnit = capturePayload?.purchase_units?.[0] || {};
     const capture = purchaseUnit?.payments?.captures?.[0] || {};
     const productId = purchaseUnit.custom_id || capture.custom_id || "";
+    const amount = capture?.amount || purchaseUnit?.amount || {};
     const customer = {
         email: capturePayload?.payer?.email_address || "",
         name: capturePayload?.payer?.name?.given_name
@@ -42,7 +43,10 @@ function readCapture(capturePayload) {
         paypal: {
             orderId: capturePayload.id,
             captureId: capture.id,
-            status: capture.status || capturePayload.status || "Completed"
+            status: capture.status || capturePayload.status || "",
+            amount: amount.value || "",
+            currency: amount.currency_code || "",
+            customId: productId
         }
     };
 }
@@ -155,6 +159,27 @@ export async function commerceRouter(request, response) {
         return;
     }
 
+    if (request.method === "GET" && url.pathname.startsWith("/customer/licenses/")) {
+        try {
+            const customer = await getAuthenticatedCustomer(request.headers.authorization);
+            const productId = decodeURIComponent(url.pathname.split("/").pop() || "");
+            const license = await revealLicenseForCustomer({
+                email: customer.email,
+                productId
+            });
+            sendJson(response, 200, {
+                status: "ok",
+                license
+            });
+        } catch (error) {
+            sendJson(response, error.statusCode || 401, {
+                status: "error",
+                message: error.message
+            });
+        }
+        return;
+    }
+
     if (request.method === "POST" && url.pathname === "/identity/register") {
         const payload = await readJsonBody(request);
         const customer = await registerCustomer(payload);
@@ -203,33 +228,59 @@ export async function commerceRouter(request, response) {
     }
 
     if (request.method === "POST" && url.pathname === "/paypal/orders") {
-        const payload = await readJsonBody(request);
-        const product = getCommerceProduct(payload.productId);
-        const order = await createPayPalOrder({
-            product,
-            customer: payload.customer || {}
-        });
+        try {
+            const payload = await readJsonBody(request);
+            const product = getCommerceProduct(payload.productId);
 
-        sendJson(response, 200, {
-            status: "created",
-            environment: config.paypalEnvironment,
-            orderId: order.id,
-            approveUrl: order.links?.find((link) => link.rel === "approve")?.href || null
-        });
+            if (!isProductSalesEnabled(product, config)) {
+                sendJson(response, 503, {
+                    status: "unavailable",
+                    code: "PRODUCT_NOT_AVAILABLE",
+                    message: "This Aurora product is temporarily unavailable."
+                });
+                return;
+            }
+
+            const order = await createPayPalOrder({
+                product,
+                customer: payload.customer || {}
+            });
+
+            sendJson(response, 200, {
+                status: "created",
+                environment: config.paypalEnvironment,
+                orderId: order.id,
+                approveUrl: order.links?.find((link) => link.rel === "approve")?.href || null
+            });
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, {
+                status: "error",
+                code: error.code || "CHECKOUT_ERROR",
+                message: error.message
+            });
+        }
         return;
     }
 
     if (request.method === "POST" && url.pathname.startsWith("/paypal/orders/") && url.pathname.endsWith("/capture")) {
         const [, , , orderId] = url.pathname.split("/");
-        const capture = await capturePayPalOrder(orderId);
-        const purchase = readCapture(capture);
-        const result = await completePurchase(purchase);
+        try {
+            const capture = await capturePayPalOrder(orderId);
+            const purchase = readCapture(capture);
+            const result = await completePurchase(purchase);
 
-        sendJson(response, 200, {
-            status: "completed",
-            capture,
-            result
-        });
+            sendJson(response, 200, {
+                status: result.status,
+                capture,
+                result
+            });
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, {
+                status: "error",
+                code: error.code || "CAPTURE_ERROR",
+                message: error.message
+            });
+        }
         return;
     }
 

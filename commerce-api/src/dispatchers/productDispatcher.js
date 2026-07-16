@@ -3,19 +3,15 @@ import { requestXauLicense } from "../clients/xauLicenseApiClient.js";
 
 const productRoutes = {
     "AURORA-MT5-AI": requestMt5License,
-    "AURORA-MT5": requestMt5License,
-    MT5: requestMt5License,
-    "AURORA-XAU-AI": requestXauLicense,
-    "AURORA-XAU": requestXauLicense,
-    XAU: requestXauLicense
+    "AURORA-XAU-AI": requestXauLicense
 };
 
 export function normalizeProductId(value) {
     return String(value || "").trim().toUpperCase();
 }
 
-export async function dispatchLicenseRequest(productId, payload) {
-    const normalizedProductId = normalizeProductId(productId);
+export async function dispatchLicenseRequest(product, payload) {
+    const normalizedProductId = normalizeProductId(product?.licenseProductId);
     const handler = productRoutes[normalizedProductId];
 
     if (!handler) {
@@ -24,6 +20,7 @@ export async function dispatchLicenseRequest(productId, payload) {
 
     return handler({
         ...payload,
+        product,
         productId: normalizedProductId
     });
 }

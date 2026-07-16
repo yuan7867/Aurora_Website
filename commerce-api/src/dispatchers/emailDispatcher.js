@@ -18,8 +18,7 @@ export async function sendLicenseEmail({ customer, productId, license, downloadL
     if (!config.emailApiUrl) {
         return {
             status: "skipped",
-            reason: "EMAIL_API_URL is not configured.",
-            payload
+            reason: "EMAIL_API_URL is not configured."
         };
     }
 

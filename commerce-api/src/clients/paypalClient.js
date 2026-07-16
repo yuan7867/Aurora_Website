@@ -69,7 +69,7 @@ export async function createPayPalOrder({ product, customer }) {
                 landing_page: "LOGIN",
                 user_action: "PAY_NOW",
                 return_url: `${config.websiteBaseUrl}/paypal-success?product=${encodeURIComponent(product.productId)}`,
-                cancel_url: `${config.websiteBaseUrl}/checkout?product=${encodeURIComponent(product.productId)}&payment=failed`
+                cancel_url: `${config.websiteBaseUrl}/checkout?sku=${encodeURIComponent(product.productId)}&payment=failed`
             }
         })
     });

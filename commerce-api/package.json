@@ -5,6 +5,11 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "check": "node --check src/server.js"
+    "migrate": "node src/storage/migrateCommerce.js",
+    "test": "node --test",
+    "check": "node --check src/server.js && node --check src/storage/migrateCommerce.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
   }
 }

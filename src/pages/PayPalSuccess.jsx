@@ -7,15 +7,17 @@ import { capturePayPalOrder } from "../services/commerceApi.js";
 import "../styles/customer.css";
 
 const productNames = {
-    "aurora-mt5-ai": "Aurora MT5 AI Trader",
-    "aurora-xau-trader": "Aurora XAU Trader"
+    "aurora-mt5-monthly": "Aurora MT5 AI Trader Monthly",
+    "aurora-mt5-yearly": "Aurora MT5 AI Trader Yearly",
+    "aurora-xau-monthly": "Aurora XAU Trader Monthly",
+    "aurora-xau-yearly": "Aurora XAU Trader Yearly"
 };
 
 function PayPalSuccess() {
     const params = new URLSearchParams(globalThis.location.search);
-    const productId = params.get("product") || "aurora-mt5-ai";
+    const productId = params.get("product") || "aurora-mt5-yearly";
     const orderId = params.get("token") || params.get("orderId");
-    const productName = productNames[productId] || productNames["aurora-mt5-ai"];
+    const productName = productNames[productId] || productNames["aurora-mt5-yearly"];
     const [state, setState] = useState({
         status: orderId ? "loading" : "error",
         message: orderId ? "Capturing PayPal payment..." : "PayPal order id was not returned.",
@@ -73,7 +75,7 @@ function PayPalSuccess() {
                     </p>
                     <div className="customer-actions">
                         <a className="customer-button" href={`/license?product=${productId}`}>Continue to License Delivery</a>
-                        {state.status === "error" && <a className="customer-button secondary" href={`/checkout?product=${productId}&payment=failed`}>Return to Checkout</a>}
+                        {state.status === "error" && <a className="customer-button secondary" href={`/checkout?sku=${productId}&payment=failed`}>Return to Checkout</a>}
                         <a className="customer-button secondary" href="/account">Open Customer Portal</a>
                     </div>
                 </section>

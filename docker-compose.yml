@@ -30,6 +30,8 @@ services:
       PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID}
       WEBSITE_BASE_URL: ${WEBSITE_BASE_URL}
       COMMERCE_DATA_DIR: ${COMMERCE_DATA_DIR}
+      DATABASE_URL: ${DATABASE_URL}
+      LICENSE_DELIVERY_ENCRYPTION_KEY: ${LICENSE_DELIVERY_ENCRYPTION_KEY}
       JWT_SECRET: ${JWT_SECRET}
       MT5_LICENSE_API_URL: ${MT5_LICENSE_API_URL}
       MT5_LICENSE_API_TOKEN: ${MT5_LICENSE_API_TOKEN}
@@ -42,10 +44,40 @@ services:
       EMAIL_API_TOKEN: ${EMAIL_API_TOKEN}
       SUPPORT_EMAIL: ${SUPPORT_EMAIL}
       AURORA_CLOUD_INGEST_TOKEN: ${AURORA_CLOUD_INGEST_TOKEN}
+      MT5_SALES_ENABLED: ${MT5_SALES_ENABLED}
+      XAU_SALES_ENABLED: ${XAU_SALES_ENABLED}
     volumes:
       - aurora-commerce-data:/app/data
+    depends_on:
+      aurora-postgres:
+        condition: service_healthy
+      xau-license-api:
+        condition: service_healthy
     networks:
       - aurora-core
+
+  xau-license-api:
+    build:
+      context: .
+      dockerfile: xau-license-api/Dockerfile
+    container_name: xau-license-api
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      DATABASE_URL: ${DATABASE_URL}
+      LICENSE_KEY_PEPPER: ${XAU_LICENSE_KEY_PEPPER}
+      LICENSE_API_INTERNAL_TOKEN: ${XAU_LICENSE_API_TOKEN}
+    depends_on:
+      aurora-postgres:
+        condition: service_healthy
+    networks:
+      - aurora-core
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/ready >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   aurora-postgres:
     image: postgres:16-alpine
@@ -72,6 +104,7 @@ services:
     depends_on:
       - aurora-website
       - aurora-commerce-api
+      - xau-license-api
     ports:
       - "80:80"
       - "443:443"
