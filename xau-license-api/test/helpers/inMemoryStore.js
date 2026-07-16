@@ -95,4 +95,9 @@ export class InMemoryStore {
     license.lastSeenAt = new Date().toISOString();
     return { valid: true, reason: "ok", license };
   }
+
+  activeBindingCount(licenseKeyHash) {
+    const license = this.licenses.find((item) => item.licenseKeyHash === licenseKeyHash);
+    return license?.binding ? 1 : 0;
+  }
 }

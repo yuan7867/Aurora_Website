@@ -7,6 +7,7 @@ import pg from "pg";
 import { conflict } from "../errors.js";
 
 const { Pool } = pg;
+const MIGRATION_LOCK_KEY = 76010041;
 
 function rowToLicense(row) {
   if (!row) {
@@ -42,8 +43,8 @@ function sameIssue(existing, request) {
 }
 
 export class PostgresStore {
-  constructor({ databaseUrl }) {
-    this.pool = new Pool({
+  constructor({ databaseUrl, pool } = {}) {
+    this.pool = pool || new Pool({
       connectionString: databaseUrl
     });
     this.migrationComplete = false;
@@ -56,8 +57,20 @@ export class PostgresStore {
   async migrate() {
     const baseDir = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
     const sql = await readFile(join(baseDir, "migrations", "001_init.sql"), "utf8");
-    await this.pool.query(sql);
-    this.migrationComplete = true;
+    const client = await this.pool.connect();
+    let locked = false;
+    this.migrationComplete = false;
+    try {
+      await client.query("SELECT pg_advisory_lock($1)", [MIGRATION_LOCK_KEY]);
+      locked = true;
+      await client.query(sql);
+      this.migrationComplete = true;
+    } finally {
+      if (locked) {
+        await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK_KEY]);
+      }
+      client.release();
+    }
   }
 
   async pingReadWrite() {
@@ -203,14 +216,11 @@ export class PostgresStore {
       );
 
       if (binding.rowCount === 0) {
-        await client.query(
-          "INSERT INTO xau_license_bindings (license_id, account_login, account_server) VALUES ($1,$2,$3)",
-          [license.id, accountLogin, accountServer]
-        );
-        await this.auditWithClient(client, license.id, "first_bind", "bot", {
-          accountLogin,
-          accountServer
-        });
+        const bindResult = await this.tryFirstBindWithClient(client, license, accountLogin, accountServer);
+        if (!bindResult.valid) {
+          await client.query("COMMIT");
+          return { valid: false, reason: bindResult.reason, license: rowToLicense(license) };
+        }
       } else {
         const active = binding.rows[0];
         if (Number(active.account_login) !== Number(accountLogin) || active.account_server !== accountServer) {
@@ -242,5 +252,40 @@ export class PostgresStore {
       "INSERT INTO xau_license_audit_log (license_id, action, actor, detail) VALUES ($1,$2,$3,$4)",
       [licenseId, action, actor, JSON.stringify(detail || {})]
     );
+  }
+
+  async tryFirstBindWithClient(client, license, accountLogin, accountServer) {
+    await client.query("SAVEPOINT xau_first_bind");
+    try {
+      await client.query(
+        "INSERT INTO xau_license_bindings (license_id, account_login, account_server) VALUES ($1,$2,$3)",
+        [license.id, accountLogin, accountServer]
+      );
+      await this.auditWithClient(client, license.id, "first_bind", "bot", {
+        accountLogin,
+        accountServer
+      });
+      await client.query("RELEASE SAVEPOINT xau_first_bind");
+      return { valid: true };
+    } catch (error) {
+      await client.query("ROLLBACK TO SAVEPOINT xau_first_bind");
+      await client.query("RELEASE SAVEPOINT xau_first_bind");
+      if (error.code !== "23505") {
+        throw error;
+      }
+
+      const existing = await client.query(
+        "SELECT * FROM xau_license_bindings WHERE license_id = $1 AND active = TRUE FOR UPDATE",
+        [license.id]
+      );
+      if (existing.rowCount === 0) {
+        throw error;
+      }
+      const active = existing.rows[0];
+      if (Number(active.account_login) === Number(accountLogin) && active.account_server === accountServer) {
+        return { valid: true };
+      }
+      return { valid: false, reason: "account_not_allowed" };
+    }
   }
 }

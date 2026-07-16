@@ -149,6 +149,12 @@ Migration SQL is stored inside this service:
 
 - `xau-license-api/migrations/001_init.sql`
 
+Migration execution uses a stable PostgreSQL advisory lock owned by the XAU
+License API migration path. Multiple service instances may start at the same
+time; one instance runs the migration while the others wait on the same lock.
+The lock is released in `finally`, and a failed migration keeps `/ready` in a
+not-ready state.
+
 Run:
 
 ```bash
@@ -166,6 +172,11 @@ Important constraints:
 - `xau_licenses.license_key_hash` is unique.
 - `xau_licenses.paypal_capture_id` is unique for automatic PayPal issuance.
 - `xau_license_bindings_one_active` allows one active binding per license.
+
+First bot binding runs inside a transaction. If concurrent inserts hit the
+active-binding unique index, PostgreSQL unique violation is converted into a
+stable bot-compatible response: the same account is accepted, a different
+account receives `valid=false` with `reason=account_not_allowed`.
 
 ## Start And Stop
 

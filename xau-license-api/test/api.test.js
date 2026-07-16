@@ -100,6 +100,39 @@ function botPayload(licenseKey, overrides = {}) {
   };
 }
 
+class ConcurrentBindingStore extends InMemoryStore {
+  constructor() {
+    super();
+    this.waiting = [];
+  }
+
+  async verifyLicense({ licenseKeyHash, accountLogin, accountServer }) {
+    const license = this.licenses.find((item) => item.licenseKeyHash === licenseKeyHash);
+    if (!license || license.binding) {
+      return super.verifyLicense({ licenseKeyHash, accountLogin, accountServer });
+    }
+
+    await new Promise((resolve) => {
+      this.waiting.push(resolve);
+      if (this.waiting.length === 2) {
+        for (const waiter of this.waiting.splice(0)) {
+          waiter();
+        }
+      }
+    });
+
+    if (!license.binding) {
+      license.binding = { accountLogin, accountServer };
+      this.audit.push({ licenseId: license.id, action: "first_bind" });
+      return { valid: true, reason: "ok", license };
+    }
+    if (license.binding.accountLogin === accountLogin && license.binding.accountServer === accountServer) {
+      return { valid: true, reason: "ok", license };
+    }
+    return { valid: false, reason: "account_not_allowed", license };
+  }
+}
+
 test("monthly first issue returns raw license once", async () => {
   const app = await start();
   try {
@@ -252,6 +285,63 @@ test("wrong account is rejected", async () => {
     const result = await postJson(app.url, "/api/xau-bot/license", botPayload(key, { account_login: 999 }), "");
     assert.equal(result.data.valid, false);
     assert.equal(result.data.reason, "account_not_allowed");
+  } finally {
+    await app.close();
+  }
+});
+
+test("same account concurrent first bind returns valid for both requests", async () => {
+  const store = new ConcurrentBindingStore();
+  const key = "AURORA-TEST-TEST-TEST-0006";
+  const license = await store.issueManual({
+    productId: PRODUCT_ID,
+    sku: "aurora-xau-monthly",
+    plan: "monthly",
+    days: 30,
+    customerEmail: "customer@example.com",
+    customerName: "Customer",
+    licenseKeyHash: hmacLicenseKey(key, config.licenseKeyPepper)
+  });
+  const app = await start(store);
+  try {
+    const [first, second] = await Promise.all([
+      postJson(app.url, "/api/xau-bot/license", botPayload(key), ""),
+      postJson(app.url, "/api/xau-bot/license", botPayload(key), "")
+    ]);
+    assert.equal(first.status, 200);
+    assert.equal(second.status, 200);
+    assert.equal(first.data.valid, true);
+    assert.equal(second.data.valid, true);
+    assert.equal(store.activeBindingCount(license.licenseKeyHash), 1);
+  } finally {
+    await app.close();
+  }
+});
+
+test("different account concurrent first bind returns one valid and one account_not_allowed", async () => {
+  const store = new ConcurrentBindingStore();
+  const key = "AURORA-TEST-TEST-TEST-0007";
+  const license = await store.issueManual({
+    productId: PRODUCT_ID,
+    sku: "aurora-xau-monthly",
+    plan: "monthly",
+    days: 30,
+    customerEmail: "customer@example.com",
+    customerName: "Customer",
+    licenseKeyHash: hmacLicenseKey(key, config.licenseKeyPepper)
+  });
+  const app = await start(store);
+  try {
+    const [first, second] = await Promise.all([
+      postJson(app.url, "/api/xau-bot/license", botPayload(key), ""),
+      postJson(app.url, "/api/xau-bot/license", botPayload(key, { account_login: 999 }), "")
+    ]);
+    assert.equal(first.status, 200);
+    assert.equal(second.status, 200);
+    const results = [first.data, second.data];
+    assert.equal(results.filter((item) => item.valid === true).length, 1);
+    assert.equal(results.filter((item) => item.reason === "account_not_allowed").length, 1);
+    assert.equal(store.activeBindingCount(license.licenseKeyHash), 1);
   } finally {
     await app.close();
   }
