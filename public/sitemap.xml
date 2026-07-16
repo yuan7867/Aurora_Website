@@ -9,23 +9,23 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://aurorahy.com/product/moomoo</loc>
+    <loc>https://aurorahy.com/product/xau</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://aurorahy.com/product/event</loc>
-    <priority>0.8</priority>
+    <loc>https://aurorahy.com/pricing</loc>
+    <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://aurorahy.com/product/wedding</loc>
-    <priority>0.8</priority>
+    <loc>https://aurorahy.com/book-demo</loc>
+    <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://aurorahy.com/product/ledger</loc>
-    <priority>0.8</priority>
+    <loc>https://aurorahy.com/download</loc>
+    <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://aurorahy.com/product/omni</loc>
-    <priority>0.8</priority>
+    <loc>https://aurorahy.com/trust</loc>
+    <priority>0.6</priority>
   </url>
 </urlset>
