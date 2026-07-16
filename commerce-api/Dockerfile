@@ -12,4 +12,4 @@ COPY commerce-api/migrations ./migrations
 ENV NODE_ENV=production
 EXPOSE 8080
 
-CMD ["node", "src/server.js"]
+CMD ["sh", "-c", "npm run migrate && exec npm start"]

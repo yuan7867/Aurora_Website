@@ -30,6 +30,9 @@ Payment and delivery idempotency use PostgreSQL:
 is unique. Customer JSON remains account profile storage only and must not be
 used as production payment idempotency.
 
+The Commerce container runs `npm run migrate && exec npm start` at startup, so
+PostgreSQL delivery tables must be created before the HTTP server starts.
+
 ## License Key Handling
 
 Commerce encrypts delivered license keys with AES-256-GCM before persistence.
