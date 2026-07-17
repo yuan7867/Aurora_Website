@@ -81,9 +81,10 @@ test("identity email sends through Resend without reply-to or secret body", asyn
     assert.doesNotMatch(request.options.body, /test-email-token|DATABASE_URL|CLIENT_SECRET|JWT_SECRET/i);
 });
 
-test("purchase activation stores reset token for first password setup", async () => {
+test("purchase activation uses PostgreSQL token storage for first password setup", async () => {
     const source = await readFile(new URL("../src/services/identityService.js", import.meta.url), "utf8");
 
-    assert.match(source, /resetToken:\s*activationToken/);
-    assert.match(source, /resetExpiresAt:\s*expiresAt/);
+    assert.match(source, /purpose:\s*"activation"/);
+    assert.match(source, /createCustomerToken/);
+    assert.doesNotMatch(source, /resetToken:\s*activationToken/);
 });

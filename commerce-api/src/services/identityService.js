@@ -2,14 +2,18 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypt
 
 import { config } from "../config.js";
 import { sendIdentityEmail } from "../dispatchers/emailDispatcher.js";
-import { getCustomer, saveCustomer } from "../storage/customerStore.js";
+import {
+    consumeCustomerToken,
+    createCustomerIfMissing,
+    createCustomerToken,
+    getCustomer,
+    hasActiveCustomerToken,
+    normalizeEmail,
+    saveCustomer
+} from "../storage/customerStore.js";
 
 const tokenTtlMs = 1000 * 60 * 60 * 24;
 const jwtTtlSeconds = 60 * 60 * 24 * 7;
-
-function normalizeEmail(email) {
-    return String(email || "").trim().toLowerCase();
-}
 
 function assertPassword(password) {
     if (String(password || "").length < 8) {
@@ -17,6 +21,23 @@ function assertPassword(password) {
         error.statusCode = 400;
         throw error;
     }
+}
+
+const rateLimits = new Map();
+
+function assertRateLimit(key, limit, windowMs) {
+    const now = Date.now();
+    const existing = rateLimits.get(key) || [];
+    const recent = existing.filter((timestamp) => now - timestamp < windowMs);
+
+    if (recent.length >= limit) {
+        const error = new Error("Too many requests. Please try again later.");
+        error.statusCode = 429;
+        throw error;
+    }
+
+    recent.push(now);
+    rateLimits.set(key, recent);
 }
 
 function base64url(input) {
@@ -64,12 +85,15 @@ function sanitizeCustomer(customer) {
 }
 
 export function createJwt(customer) {
+    const issuedAt = Math.floor(Date.now() / 1000);
     const header = base64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
     const payload = base64url(JSON.stringify({
         sub: customer.email,
         email: customer.email,
         name: customer.name,
-        exp: Math.floor(Date.now() / 1000) + jwtTtlSeconds
+        iat: issuedAt,
+        pwd: Math.floor(new Date(customer.passwordChangedAt || Date.now()).getTime() / 1000),
+        exp: issuedAt + jwtTtlSeconds
     }));
     const unsigned = `${header}.${payload}`;
     return `${unsigned}.${sign(unsigned)}`;
@@ -98,6 +122,7 @@ export function verifyJwt(token) {
 
 export async function registerCustomer({ name, email, password }) {
     const normalizedEmail = normalizeEmail(email);
+    assertRateLimit(`register:${normalizedEmail}`, 5, 60 * 60 * 1000);
     assertPassword(password);
 
     if (!normalizedEmail) {
@@ -112,20 +137,23 @@ export async function registerCustomer({ name, email, password }) {
         throw new Error("Customer already exists.");
     }
 
-    const activationToken = createToken();
-    const customer = await saveCustomer({
-        ...(existing || {}),
+    const customer = await createCustomerIfMissing({
         email: normalizedEmail,
         name: name || existing?.name || "Aurora Customer",
         passwordHash: hashPassword(password),
         status: "verification_required",
         emailVerified: false,
-        activationToken,
-        activationExpiresAt: new Date(Date.now() + tokenTtlMs).toISOString(),
         products: existing?.products || [],
         licenses: existing?.licenses || [],
         downloads: existing?.downloads || [],
         orders: existing?.orders || []
+    });
+    const activationToken = createToken();
+    await createCustomerToken({
+        email: customer.email,
+        purpose: "email_verification",
+        token: activationToken,
+        expiresAt: new Date(Date.now() + tokenTtlMs).toISOString()
     });
 
     await sendIdentityEmail({
@@ -138,10 +166,16 @@ export async function registerCustomer({ name, email, password }) {
 }
 
 export async function loginCustomer({ email, password }) {
-    const customer = await getCustomer(normalizeEmail(email));
+    const normalizedEmail = normalizeEmail(email);
+    assertRateLimit(`login:${normalizedEmail}`, 10, 15 * 60 * 1000);
+    const customer = await getCustomer(normalizedEmail);
 
     if (!customer || !verifyPassword(password, customer.passwordHash)) {
         throw new Error("Invalid email or password.");
+    }
+
+    if (customer.status === "disabled" || customer.disabledAt) {
+        throw new Error("Customer account is disabled.");
     }
 
     if (!customer.emailVerified) {
@@ -155,18 +189,20 @@ export async function loginCustomer({ email, password }) {
 }
 
 export async function verifyCustomerEmail(token) {
-    const customer = await findByToken("activationToken", token);
+    const consumed = await consumeCustomerToken({
+        token,
+        purposes: ["email_verification"]
+    });
+    const customer = consumed?.customer;
 
-    if (!customer || new Date(customer.activationExpiresAt).getTime() < Date.now()) {
+    if (!customer) {
         throw new Error("Activation token is invalid or expired.");
     }
 
     const saved = await saveCustomer({
         ...customer,
         status: "active",
-        emailVerified: true,
-        activationToken: null,
-        activationExpiresAt: null
+        emailVerified: true
     });
 
     return {
@@ -176,21 +212,24 @@ export async function verifyCustomerEmail(token) {
 }
 
 export async function requestPasswordReset(email) {
-    const customer = await getCustomer(normalizeEmail(email));
+    const normalizedEmail = normalizeEmail(email);
+    assertRateLimit(`forgot:${normalizedEmail}`, 5, 60 * 60 * 1000);
+    const customer = await getCustomer(normalizedEmail);
 
     if (!customer) {
         return { status: "ok" };
     }
 
     const resetToken = createToken();
-    const saved = await saveCustomer({
-        ...customer,
-        resetToken,
-        resetExpiresAt: new Date(Date.now() + tokenTtlMs).toISOString()
+    await createCustomerToken({
+        email: customer.email,
+        purpose: "password_reset",
+        token: resetToken,
+        expiresAt: new Date(Date.now() + tokenTtlMs).toISOString()
     });
 
     await sendIdentityEmail({
-        customer: saved,
+        customer,
         type: "password-reset",
         token: resetToken
     });
@@ -201,9 +240,13 @@ export async function requestPasswordReset(email) {
 export async function resetPassword({ token, password }) {
     assertPassword(password);
 
-    const customer = await findByToken("resetToken", token);
+    const consumed = await consumeCustomerToken({
+        token,
+        purposes: ["password_reset", "activation"]
+    });
+    const customer = consumed?.customer;
 
-    if (!customer || new Date(customer.resetExpiresAt).getTime() < Date.now()) {
+    if (!customer) {
         throw new Error("Reset token is invalid or expired.");
     }
 
@@ -230,6 +273,14 @@ export async function getAuthenticatedCustomer(authHeader) {
     if (!customer) {
         throw new Error("Customer session not found.");
     }
+    if (customer.status === "disabled" || customer.disabledAt) {
+        throw new Error("Customer account is disabled.");
+    }
+    const tokenPasswordTime = Number(payload.pwd || payload.iat || 0);
+    const currentPasswordTime = Math.floor(new Date(customer.passwordChangedAt || 0).getTime() / 1000);
+    if (currentPasswordTime > tokenPasswordTime) {
+        throw new Error("Customer session expired after password change.");
+    }
 
     return sanitizeCustomer(customer);
 }
@@ -238,17 +289,22 @@ export async function createActivationForCustomer(customer) {
     if (customer.passwordHash && customer.emailVerified) {
         return customer;
     }
+    if (await hasActiveCustomerToken({ email: customer.email, purpose: "activation" })) {
+        return customer;
+    }
 
     const activationToken = createToken();
     const expiresAt = new Date(Date.now() + tokenTtlMs).toISOString();
     const saved = await saveCustomer({
         ...customer,
         status: "activation_required",
-        emailVerified: false,
-        activationToken,
-        activationExpiresAt: expiresAt,
-        resetToken: activationToken,
-        resetExpiresAt: expiresAt
+        emailVerified: false
+    });
+    await createCustomerToken({
+        email: saved.email,
+        purpose: "activation",
+        token: activationToken,
+        expiresAt
     });
 
     await sendIdentityEmail({
@@ -258,12 +314,4 @@ export async function createActivationForCustomer(customer) {
     });
 
     return saved;
-}
-
-async function findByToken(field, token) {
-    const { readFile } = await import("node:fs/promises");
-    const { join } = await import("node:path");
-    const file = join(config.dataDir, "customers.json");
-    const store = JSON.parse(await readFile(file, "utf8"));
-    return Object.values(store.customers || {}).find((customer) => customer[field] === token) || null;
 }

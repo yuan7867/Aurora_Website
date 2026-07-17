@@ -80,6 +80,13 @@ function assertCloudIngestAuthorized(request) {
     }
 }
 
+function sendIdentityError(response, error) {
+    sendJson(response, error.statusCode || 400, {
+        status: "error",
+        message: error.message
+    });
+}
+
 async function sendCloudData(response, loader) {
     try {
         const data = await loader();
@@ -186,49 +193,70 @@ export async function commerceRouter(request, response) {
     }
 
     if (request.method === "POST" && url.pathname === "/identity/register") {
-        const payload = await readJsonBody(request);
-        const customer = await registerCustomer(payload);
-        sendJson(response, 200, {
-            status: "verification_required",
-            customer
-        });
+        try {
+            const payload = await readJsonBody(request);
+            const customer = await registerCustomer(payload);
+            sendJson(response, 200, {
+                status: "verification_required",
+                customer
+            });
+        } catch (error) {
+            sendIdentityError(response, error);
+        }
         return;
     }
 
     if (request.method === "POST" && url.pathname === "/identity/login") {
-        const payload = await readJsonBody(request);
-        const result = await loginCustomer(payload);
-        sendJson(response, 200, {
-            status: "ok",
-            ...result
-        });
+        try {
+            const payload = await readJsonBody(request);
+            const result = await loginCustomer(payload);
+            sendJson(response, 200, {
+                status: "ok",
+                ...result
+            });
+        } catch (error) {
+            error.statusCode = error.statusCode || 401;
+            sendIdentityError(response, error);
+        }
         return;
     }
 
     if (request.method === "POST" && url.pathname === "/identity/verify-email") {
-        const payload = await readJsonBody(request);
-        const result = await verifyCustomerEmail(payload.token);
-        sendJson(response, 200, {
-            status: "ok",
-            ...result
-        });
+        try {
+            const payload = await readJsonBody(request);
+            const result = await verifyCustomerEmail(payload.token);
+            sendJson(response, 200, {
+                status: "ok",
+                ...result
+            });
+        } catch (error) {
+            sendIdentityError(response, error);
+        }
         return;
     }
 
     if (request.method === "POST" && url.pathname === "/identity/forgot-password") {
-        const payload = await readJsonBody(request);
-        const result = await requestPasswordReset(payload.email);
-        sendJson(response, 200, result);
+        try {
+            const payload = await readJsonBody(request);
+            const result = await requestPasswordReset(payload.email);
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendIdentityError(response, error);
+        }
         return;
     }
 
     if (request.method === "POST" && url.pathname === "/identity/reset-password") {
-        const payload = await readJsonBody(request);
-        const result = await resetPassword(payload);
-        sendJson(response, 200, {
-            status: "ok",
-            ...result
-        });
+        try {
+            const payload = await readJsonBody(request);
+            const result = await resetPassword(payload);
+            sendJson(response, 200, {
+                status: "ok",
+                ...result
+            });
+        } catch (error) {
+            sendIdentityError(response, error);
+        }
         return;
     }
 
