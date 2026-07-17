@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 import { handlePayPalWebhook } from "./handlers/webhookHandler.js";
 import { capturePayPalOrder, createPayPalOrder } from "./clients/paypalClient.js";
 import { config } from "./config.js";
@@ -74,11 +76,23 @@ function assertCloudIngestAuthorized(request) {
         throw error;
     }
 
-    if (readBearerToken(request) !== config.auroraCloudIngestToken) {
+    if (!constantTimeEquals(readBearerToken(request), config.auroraCloudIngestToken)) {
         const error = new Error("Aurora Cloud ingest request is unauthorized.");
         error.statusCode = 401;
         throw error;
     }
+}
+
+function constantTimeEquals(actual, expected) {
+    const actualBuffer = Buffer.from(String(actual || ""), "utf8");
+    const expectedBuffer = Buffer.from(String(expected || ""), "utf8");
+
+    if (actualBuffer.length !== expectedBuffer.length) {
+        timingSafeEqual(expectedBuffer, expectedBuffer);
+        return false;
+    }
+
+    return timingSafeEqual(actualBuffer, expectedBuffer);
 }
 
 function sendIdentityError(response, error) {
@@ -162,7 +176,10 @@ export async function commerceRouter(request, response) {
         return;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/v1/xau/battle-test") {
+    if (
+        request.method === "POST"
+        && (url.pathname === "/api/v1/xau/battle-test" || url.pathname === "/api/v1/xau/live-snapshot")
+    ) {
         try {
             assertCloudIngestAuthorized(request);
             const payload = await readJsonBody(request);

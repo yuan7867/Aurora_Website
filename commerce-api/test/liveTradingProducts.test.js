@@ -9,6 +9,7 @@ const component = await readFile(new URL("../../src/components/LivePerformance.j
 test("live trading keeps MT5 ingest and adds XAU ingest without changing auth", () => {
     assert.match(router, /\/api\/v1\/mt5\/battle-test/);
     assert.match(router, /\/api\/v1\/xau\/battle-test/);
+    assert.match(router, /\/api\/v1\/xau\/live-snapshot/);
     assert.match(router, /assertCloudIngestAuthorized\(request\)/);
 });
 

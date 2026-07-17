@@ -35,15 +35,15 @@ function firstValue(source, keys) {
 
 function formatValue(value, suffix = "") {
     if (value === undefined || value === null || value === "") {
-        return "Loading...";
+        return "—";
     }
 
     return `${value}${suffix}`;
 }
 
-function formatMoney(value) {
+function formatMoney(value, currency = "USD") {
     if (value === undefined || value === null || value === "") {
-        return "Loading...";
+        return "—";
     }
 
     const numberValue = Number(value);
@@ -52,15 +52,19 @@ function formatMoney(value) {
         return String(value);
     }
 
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD"
-    }).format(numberValue);
+    try {
+        return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency
+        }).format(numberValue);
+    } catch {
+        return `${currency} ${numberValue.toFixed(2)}`;
+    }
 }
 
 function relativeTime(timestamp) {
     if (!timestamp) {
-        return "Loading...";
+        return "—";
     }
 
     const date = new Date(timestamp);
@@ -206,13 +210,17 @@ function buildMetrics(data, cloudStatus) {
     const status = data?.status || {};
     const performance = data?.performance || {};
     const heartbeat = data?.heartbeat || {};
+    const currency = firstValue(status, ["accountCurrency", "account_currency"])
+        || firstValue(data, ["accountCurrency", "account_currency"])
+        || "USD";
 
     return [
-        ["Balance", formatMoney(firstValue(status, ["balance", "accountBalance", "account_balance"]))],
-        ["Equity", formatMoney(firstValue(status, ["equity", "accountEquity", "account_equity"]))],
-        ["Today's Profit", formatMoney(firstValue(performance, ["todayProfit", "today_profit", "dailyProfit", "daily_profit"]))],
+        ["Currency", formatValue(currency)],
+        ["Balance", formatMoney(firstValue(status, ["balance", "accountBalance", "account_balance"]), currency)],
+        ["Equity", formatMoney(firstValue(status, ["equity", "accountEquity", "account_equity"]), currency)],
+        ["Today's Profit", formatMoney(firstValue(performance, ["todayProfit", "today_profit", "dailyProfit", "daily_profit"]), currency)],
         ["Open Positions", formatValue(firstValue(status, ["openPositions", "open_positions", "positions"]))],
-        ["Floating P/L", formatMoney(firstValue(status, ["floatingPL", "floating_pl", "floatingPnl", "floating_pnl"]))],
+        ["Floating P/L", formatMoney(firstValue(status, ["floatingPL", "floating_pl", "floatingPnl", "floating_pnl"]), currency)],
         ["Win Rate", formatValue(firstValue(performance, ["winRate", "win_rate"]), "%")],
         ["Profit Factor", formatValue(firstValue(performance, ["profitFactor", "profit_factor"]))],
         ["Running Days", formatValue(firstValue(performance, ["runningDays", "running_days"]))],
@@ -224,11 +232,14 @@ function buildMetrics(data, cloudStatus) {
 }
 
 function LiveCard({ product, data, status }) {
-    const isOffline = status === "offline";
+    const cloudState = data?.cloudStatus || data?.status?.cloudStatus || data?.heartbeat?.cloudStatus || "";
+    const isOffline = status === "offline" || cloudState === "OFFLINE";
+    const isStale = cloudState === "STALE";
+    const badgeText = isOffline ? "Offline" : isStale ? "Reconnecting" : "Live";
     const marketWindow = useMemo(() => getMarketWindow(), []);
     const metrics = useMemo(
-        () => buildMetrics(data, status === "ready" || status === "syncing" ? "Connected" : "Connecting..."),
-        [data, status]
+        () => buildMetrics(data, isOffline ? "Offline" : isStale ? "Reconnecting" : "Live"),
+        [data, isOffline, isStale]
     );
 
     return (
@@ -238,13 +249,13 @@ function LiveCard({ product, data, status }) {
                     <span>{product.profile}</span>
                     <h2>{product.name}</h2>
                 </div>
-                <strong className={isOffline ? "is-offline" : "is-live"}>{isOffline ? "Connecting" : "Live"}</strong>
+                <strong className={isOffline || isStale ? "is-offline" : "is-live"}>{badgeText}</strong>
             </div>
 
-            {isOffline && (
+            {(isOffline || isStale) && (
                 <div className="cloud-offline-state compact" role="status">
-                    <strong>Connecting to Aurora Cloud...</strong>
-                    <span>Waiting for {product.name} live data.</span>
+                    <strong>{isStale ? "Reconnecting to Aurora Cloud..." : "Connecting to Aurora Cloud..."}</strong>
+                    <span>{isStale ? `${product.name} data is stale.` : `Waiting for ${product.name} live data.`}</span>
                 </div>
             )}
 
@@ -262,7 +273,7 @@ function LiveCard({ product, data, status }) {
                 {metrics.map(([label, value]) => (
                     <div key={label}>
                         <span>{label}</span>
-                        <strong>{isOffline ? "Connecting..." : value}</strong>
+                        <strong>{isOffline && !data ? "Connecting..." : value}</strong>
                     </div>
                 ))}
             </div>
@@ -298,7 +309,7 @@ function LivePerformance() {
                 setState((current) => ({
                     ...current,
                     [productId]: {
-                        status: "ready",
+                        status: data?.cloudStatus === "OFFLINE" ? "offline" : "ready",
                         data
                     }
                 }));
