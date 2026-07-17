@@ -52,16 +52,109 @@ body {
 .aurora-film__picture img {
   object-fit: cover;
   object-position: 50% 58%;
-  transform: translate3d(0, 4.5%, 0) scale(1.06);
+  transform: scale(1.045);
   transform-origin: 50% 100%;
-  will-change: transform, filter;
-  animation: aurora-film-rise 18s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+  filter: brightness(0.58) saturate(1.1);
 }
 
 .aurora-film__shade {
+  z-index: 3;
   background:
     radial-gradient(ellipse at 50% 42%, transparent 0 31%, rgba(2, 7, 20, 0.08) 55%, rgba(2, 7, 20, 0.24) 100%),
     linear-gradient(180deg, rgba(2, 7, 20, 0.32), transparent 30%, transparent 72%, rgba(2, 7, 20, 0.2));
+}
+
+.aurora-motion,
+.aurora-motion > * {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.aurora-motion {
+  z-index: 2;
+  overflow: hidden;
+  opacity: 0.92;
+  mix-blend-mode: screen;
+}
+
+.aurora-motion__veil {
+  background:
+    radial-gradient(ellipse at 17% 72%, rgba(72, 229, 255, 0.2), transparent 34%),
+    radial-gradient(ellipse at 82% 72%, rgba(138, 103, 255, 0.2), transparent 34%),
+    linear-gradient(180deg, transparent 0 18%, rgba(46, 157, 255, 0.05) 45%, rgba(75, 255, 214, 0.08) 100%);
+  opacity: 0.72;
+  animation: aurora-veil-breathe 7s ease-in-out infinite alternate;
+}
+
+.aurora-motion__ribbon {
+  top: 10%;
+  bottom: -22%;
+  width: 26%;
+  border-radius: 50% 50% 16% 16%;
+  filter: saturate(1.18);
+  opacity: 0.58;
+  transform-origin: 50% 100%;
+  will-change: transform, opacity, background-position;
+  background-size: 180% 150%;
+  background-position: 50% 100%;
+  mask-image:
+    radial-gradient(ellipse at 50% 100%, #000 0 23%, rgba(0, 0, 0, 0.72) 42%, transparent 72%),
+    linear-gradient(90deg, transparent 0 6%, #000 26% 74%, transparent 94%);
+  mask-composite: intersect;
+  animation: aurora-ribbon-flow 10s ease-in-out infinite alternate;
+}
+
+.aurora-motion__ribbon--left {
+  left: -4%;
+  animation-duration: 11s;
+}
+
+.aurora-motion__ribbon--center {
+  left: 37%;
+  width: 23%;
+  opacity: 0.34;
+  animation-duration: 14s;
+  animation-delay: -6s;
+}
+
+.aurora-motion__ribbon--right {
+  right: -4%;
+  animation-duration: 12s;
+  animation-delay: -4s;
+}
+
+.aurora-motion__ribbon--cyan {
+  background:
+    repeating-linear-gradient(92deg, transparent 0 9%, rgba(110, 246, 255, 0.26) 12%, transparent 18%),
+    linear-gradient(180deg, transparent 0 11%, rgba(84, 226, 255, 0.22), rgba(24, 177, 255, 0.55) 68%, rgba(89, 255, 207, 0.72) 100%);
+}
+
+.aurora-motion__ribbon--violet {
+  background:
+    repeating-linear-gradient(88deg, transparent 0 10%, rgba(152, 126, 255, 0.24) 13%, transparent 19%),
+    linear-gradient(180deg, transparent 0 13%, rgba(99, 113, 255, 0.2), rgba(93, 83, 255, 0.58) 66%, rgba(203, 118, 255, 0.66) 100%);
+}
+
+.aurora-motion__ribbon--blue {
+  background:
+    repeating-linear-gradient(94deg, transparent 0 12%, rgba(111, 232, 255, 0.16) 15%, transparent 22%),
+    linear-gradient(180deg, transparent 0 21%, rgba(82, 169, 255, 0.14), rgba(103, 120, 255, 0.38) 76%, rgba(74, 220, 255, 0.34) 100%);
+}
+
+.aurora-motion__ribbon--gold {
+  background:
+    repeating-linear-gradient(88deg, transparent 0 12%, rgba(255, 220, 130, 0.2) 15%, transparent 22%),
+    linear-gradient(180deg, transparent 0 18%, rgba(75, 210, 255, 0.16), rgba(88, 165, 255, 0.36) 60%, rgba(236, 194, 97, 0.6) 100%);
+}
+
+.aurora-motion__horizon {
+  top: auto;
+  bottom: -14%;
+  height: 34%;
+  background: radial-gradient(ellipse at 50% 78%, rgba(129, 239, 255, 0.24), rgba(127, 94, 255, 0.12) 34%, transparent 68%);
+  opacity: 0.52;
+  animation: aurora-horizon-flow 9s ease-in-out infinite alternate;
 }
 
 .aurora-nav {
@@ -213,14 +306,35 @@ body {
   to { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
 
-@keyframes aurora-film-rise {
+@keyframes aurora-ribbon-flow {
   0% {
-    transform: translate3d(0, 4.5%, 0) scale(1.06);
-    filter: brightness(0.94) saturate(0.96);
+    opacity: 0.36;
+    background-position: 42% 100%;
+    transform: translate3d(-2.4%, 7%, 0) scaleX(0.92) scaleY(0.88);
+  }
+  45% {
+    opacity: 0.74;
   }
   100% {
-    transform: translate3d(0, -3.5%, 0) scale(1.06);
-    filter: brightness(1.04) saturate(1.03);
+    opacity: 0.6;
+    background-position: 68% 18%;
+    transform: translate3d(2.8%, -5%, 0) scaleX(1.08) scaleY(1.05);
+  }
+}
+
+@keyframes aurora-veil-breathe {
+  from { opacity: 0.48; }
+  to { opacity: 0.82; }
+}
+
+@keyframes aurora-horizon-flow {
+  from {
+    opacity: 0.42;
+    transform: translate3d(0, 4%, 0) scaleX(0.98);
+  }
+  to {
+    opacity: 0.74;
+    transform: translate3d(0, -3%, 0) scaleX(1.02);
   }
 }
 
@@ -260,8 +374,11 @@ body {
   .aurora-film { inset: 70px 0 0; }
   .aurora-film__picture img {
     object-position: 50% 64%;
-    animation-duration: 21s;
   }
+  .aurora-motion__ribbon { width: 44%; opacity: 0.5; }
+  .aurora-motion__ribbon--left { left: -22%; }
+  .aurora-motion__ribbon--right { right: -22%; }
+  .aurora-motion__ribbon--center { left: 27%; width: 45%; opacity: 0.28; }
   .aurora-nav__links { top: 70px; }
   .aurora-brand__mark { width: 42px; height: 42px; }
   .aurora-brand__copy strong { font-size: 14px; }

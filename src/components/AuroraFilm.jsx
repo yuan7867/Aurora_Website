@@ -1,5 +1,7 @@
 import React from "react";
 
+import AuroraMotion from "./AuroraMotion";
+
 export default function AuroraFilm() {
   return (
     <div className="aurora-film" aria-hidden="true">
@@ -14,6 +16,7 @@ export default function AuroraFilm() {
           fetchPriority="high"
         />
       </picture>
+      <AuroraMotion />
       <div className="aurora-film__shade" />
     </div>
   );
