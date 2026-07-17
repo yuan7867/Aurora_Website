@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { config } from "../config.js";
 
 const liveTradingFile = join(config.dataDir, "live-trading.json");
+const defaultProduct = "mt5";
 
 function readFirst(source, keys) {
     for (const key of keys) {
@@ -51,10 +52,30 @@ function normalizeLiveTradingPayload(payload) {
     };
 }
 
+function normalizeProduct(productId) {
+    const normalized = String(productId || defaultProduct).trim().toLowerCase();
+
+    if (["xau", "aurora-xau", "aurora-xau-ai", "xau-martingale"].includes(normalized)) {
+        return "xau";
+    }
+
+    return "mt5";
+}
+
 async function readLiveTradingData() {
     try {
         const rawData = await readFile(liveTradingFile, "utf8");
-        return JSON.parse(rawData);
+        const parsed = JSON.parse(rawData);
+
+        if (parsed?.products) {
+            return parsed;
+        }
+
+        return {
+            products: {
+                [defaultProduct]: parsed
+            }
+        };
     } catch {
         const error = new Error("Aurora Cloud is waiting for MT5 live trading data.");
         error.statusCode = 503;
@@ -62,32 +83,60 @@ async function readLiveTradingData() {
     }
 }
 
-export async function saveLiveTradingData(payload) {
+export async function saveLiveTradingData(payload, productId = defaultProduct) {
+    let existing = { products: {} };
+    try {
+        existing = await readLiveTradingData();
+    } catch {
+        existing = { products: {} };
+    }
+
+    const product = normalizeProduct(productId);
     const liveTradingData = normalizeLiveTradingPayload(payload);
+    const nextData = {
+        products: {
+            ...(existing.products || {}),
+            [product]: liveTradingData
+        }
+    };
 
     await mkdir(dirname(liveTradingFile), {
         recursive: true
     });
-    await writeFile(liveTradingFile, JSON.stringify(liveTradingData, null, 2));
+    await writeFile(liveTradingFile, JSON.stringify(nextData, null, 2));
 
     return liveTradingData;
 }
 
-export async function getHeartbeatData() {
+export async function getLiveTradingProductData(productId = defaultProduct) {
     const liveTradingData = await readLiveTradingData();
+    const product = normalizeProduct(productId);
+    const productData = liveTradingData.products?.[product];
+
+    if (!productData) {
+        const error = new Error(`Aurora Cloud is waiting for ${product.toUpperCase()} live trading data.`);
+        error.statusCode = 503;
+        throw error;
+    }
+
+    return productData;
+}
+
+export async function getHeartbeatData(productId = defaultProduct) {
+    const liveTradingData = await getLiveTradingProductData(productId);
     return liveTradingData.heartbeat;
 }
 
-export async function getStatusData() {
-    const liveTradingData = await readLiveTradingData();
+export async function getStatusData(productId = defaultProduct) {
+    const liveTradingData = await getLiveTradingProductData(productId);
     return {
         ...liveTradingData.status,
         lastSync: liveTradingData.timestamp
     };
 }
 
-export async function getPerformanceData() {
-    const liveTradingData = await readLiveTradingData();
+export async function getPerformanceData(productId = defaultProduct) {
+    const liveTradingData = await getLiveTradingProductData(productId);
     return {
         ...liveTradingData.performance,
         lastSync: liveTradingData.timestamp

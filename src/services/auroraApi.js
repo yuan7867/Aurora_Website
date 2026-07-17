@@ -156,6 +156,10 @@ export async function getPerformance() {
     return requestCloud("performance");
 }
 
+export async function getLiveProduct(productId) {
+    return requestCloud("liveProduct", { productId });
+}
+
 export async function checkCloud() {
     const heartbeat = await getHeartbeat();
 

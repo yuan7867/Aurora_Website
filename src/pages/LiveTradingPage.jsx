@@ -12,10 +12,10 @@ function LiveTradingPage() {
             <main className="customer-page live-trading-page">
                 <section className="customer-hero">
                     <span className="customer-tag">Live Trading</span>
-                    <h1>Aurora MT5 live trading status.</h1>
+                    <h1>Aurora live trading center.</h1>
                     <p>
-                        Live values are requested from Aurora Cloud. If Aurora Cloud is offline, this page shows a
-                        connecting state instead of fake trading data.
+                        Aurora MT5 and Aurora XAU are shown side by side from Aurora Cloud. If one system is offline,
+                        the page shows a connecting state instead of fake trading data.
                     </p>
                 </section>
 

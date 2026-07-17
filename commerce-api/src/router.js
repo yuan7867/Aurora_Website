@@ -18,6 +18,7 @@ import {
 } from "./services/identityService.js";
 import {
     getHeartbeatData,
+    getLiveTradingProductData,
     getPerformanceData,
     getStatusData,
     saveLiveTradingData
@@ -135,11 +136,37 @@ export async function commerceRouter(request, response) {
         return;
     }
 
+    if (request.method === "GET" && url.pathname.startsWith("/api/v1/live/")) {
+        const productId = decodeURIComponent(url.pathname.split("/").pop() || "");
+        await sendCloudData(response, () => getLiveTradingProductData(productId));
+        return;
+    }
+
     if (request.method === "POST" && url.pathname === "/api/v1/mt5/battle-test") {
         try {
             assertCloudIngestAuthorized(request);
             const payload = await readJsonBody(request);
-            const data = await saveLiveTradingData(payload);
+            const data = await saveLiveTradingData(payload, "mt5");
+            sendJson(response, 200, {
+                success: true,
+                data
+            });
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, {
+                success: false,
+                error: {
+                    message: error.message
+                }
+            });
+        }
+        return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/v1/xau/battle-test") {
+        try {
+            assertCloudIngestAuthorized(request);
+            const payload = await readJsonBody(request);
+            const data = await saveLiveTradingData(payload, "xau");
             sendJson(response, 200, {
                 success: true,
                 data

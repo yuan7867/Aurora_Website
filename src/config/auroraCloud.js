@@ -10,6 +10,7 @@ export const auroraCloud = {
         heartbeat: "/heartbeat",
         status: "/status",
         performance: "/performance",
+        liveProduct: "/live/:productId",
         products: "/products",
         product: "/products/:productId",
         releases: "/releases"
