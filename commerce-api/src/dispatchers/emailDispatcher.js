@@ -1,55 +1,67 @@
 import { config } from "../config.js";
-import { postJson } from "../utils/http.js";
 
-export async function sendLicenseEmail({ customer, productId, license, downloadLink }) {
-    const payload = {
-        to: customer.email,
-        subject: `Aurora ${productId} License`,
-        template: "license-delivery",
-        data: {
-            customer,
-            productId,
-            license,
-            downloadLink,
-            supportEmail: config.supportEmail
-        }
-    };
+export function sanitizeEmailError(error) {
+    const status = error?.statusCode ? `status_${error.statusCode}` : "network_error";
+    const message = String(error?.message || "email_delivery_failed")
+        .replace(/AURORA-[A-Z0-9-]+/g, "[license-redacted]")
+        .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [redacted]")
+        .slice(0, 300);
 
-    if (!config.emailApiUrl) {
-        return {
-            status: "skipped",
-            reason: "EMAIL_API_URL is not configured."
-        };
-    }
-
-    return postJson(config.emailApiUrl, payload, config.emailApiToken);
+    return `${status}: ${message}`;
 }
 
-export async function sendIdentityEmail({ customer, type, token }) {
-    const path = type === "password-reset" ? "reset-password" : "verify-email";
-    const link = `${config.websiteBaseUrl}/${path}?token=${encodeURIComponent(token)}`;
-    const subject = type === "password-reset"
-        ? "Reset your Aurora password"
-        : "Activate your Aurora account";
-    const payload = {
-        to: customer.email,
-        subject,
-        template: type,
-        data: {
-            customer,
-            activationLink: link,
-            resetLink: link,
-            supportEmail: config.supportEmail
-        }
-    };
+export function isRetryableEmailError(error) {
+    if (!error?.statusCode) {
+        return true;
+    }
+    return error.statusCode === 429 || error.statusCode >= 500;
+}
 
+export async function sendResendEmail({ deliveryId, to, subject, html, text }, fetchImpl = globalThis.fetch) {
     if (!config.emailApiUrl) {
-        return {
-            status: "skipped",
-            reason: "EMAIL_API_URL is not configured.",
-            payload
-        };
+        const error = new Error("EMAIL_API_URL is not configured.");
+        error.statusCode = 503;
+        throw error;
     }
 
-    return postJson(config.emailApiUrl, payload, config.emailApiToken);
+    if (!config.emailApiToken) {
+        const error = new Error("EMAIL_API_TOKEN is not configured.");
+        error.statusCode = 503;
+        throw error;
+    }
+
+    const response = await fetchImpl(config.emailApiUrl, {
+        method: "POST",
+        headers: {
+            authorization: `Bearer ${config.emailApiToken}`,
+            "content-type": "application/json",
+            "Idempotency-Key": `license-delivery/${deliveryId}`
+        },
+        body: JSON.stringify({
+            from: config.emailFrom,
+            to,
+            subject,
+            html,
+            text
+        })
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        const error = new Error(data?.message || "Resend email delivery failed.");
+        error.statusCode = response.status;
+        throw error;
+    }
+
+    return {
+        status: "sent",
+        id: data.id || ""
+    };
+}
+
+export async function sendIdentityEmail() {
+    return {
+        status: "skipped",
+        reason: "Identity email delivery is not part of this phase."
+    };
 }

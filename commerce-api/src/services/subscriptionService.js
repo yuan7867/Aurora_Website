@@ -8,7 +8,6 @@ import {
 } from "../clients/xauLicenseApiClient.js";
 import { config } from "../config.js";
 import { getDownloadLink } from "../dispatchers/downloadDispatcher.js";
-import { sendLicenseEmail } from "../dispatchers/emailDispatcher.js";
 import {
     assertProductSubscriptionAvailable,
     getCommerceProduct,
@@ -32,6 +31,7 @@ import {
 } from "../storage/commerceStore.js";
 import { savePurchase } from "../storage/customerStore.js";
 import { encryptLicenseKey } from "../utils/licenseCrypto.js";
+import { deliverLicenseEmail } from "./emailDeliveryService.js";
 import { createActivationForCustomer, getAuthenticatedCustomer } from "./identityService.js";
 
 function readApprovalUrl(subscription) {
@@ -204,15 +204,7 @@ async function saveInitialSubscriptionDelivery({ product, customer, paypal, lice
         throw error;
     }
 
-    const emailResult = await sendLicenseEmail({
-        customer,
-        productId: product.licenseProductId,
-        license: {
-            ...license,
-            licenseKey
-        },
-        downloadLink
-    });
+    const emailResult = await deliverLicenseEmail({ deliveryId: delivery.id });
 
     const customerRecord = await savePurchase({
         customer,

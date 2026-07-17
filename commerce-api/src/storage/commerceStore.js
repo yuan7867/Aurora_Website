@@ -58,9 +58,93 @@ function rowToDelivery(row) {
         encryptionIv: row.encryption_iv,
         encryptionAuthTag: row.encryption_auth_tag,
         downloadUrl: row.download_url,
-        emailStatus: row.email_status
+        emailStatus: row.email_status,
+        resendEmailId: row.resend_email_id,
+        emailSentAt: row.email_sent_at,
+        emailError: row.email_error,
+        emailAttempts: row.email_attempts
     };
 }
+
+function rowToEmailDelivery(row) {
+    if (!row) {
+        return null;
+    }
+
+    return {
+        delivery: rowToDelivery({
+            id: row.delivery_id,
+            payment_id: row.delivery_payment_id,
+            customer_email: row.delivery_customer_email,
+            license_product_id: row.license_product_id,
+            plan: row.delivery_plan,
+            encrypted_license_key: row.encrypted_license_key,
+            encryption_iv: row.encryption_iv,
+            encryption_auth_tag: row.encryption_auth_tag,
+            download_url: row.download_url,
+            email_status: row.email_status,
+            resend_email_id: row.resend_email_id,
+            email_sent_at: row.email_sent_at,
+            email_error: row.email_error,
+            email_attempts: row.email_attempts
+        }),
+        payment: rowToPayment({
+            id: row.payment_id,
+            paypal_capture_id: row.paypal_capture_id,
+            paypal_order_id: row.paypal_order_id,
+            paypal_event_id: row.paypal_event_id,
+            sku: row.sku,
+            amount: row.amount,
+            currency: row.currency,
+            payment_status: row.payment_status,
+            delivery_status: row.delivery_status,
+            customer_email: row.payment_customer_email,
+            customer_name: row.customer_name
+        }),
+        subscription: row.paypal_subscription_id
+            ? {
+                paypalSubscriptionId: row.paypal_subscription_id,
+                currentPeriodEnd: row.current_period_end,
+                subscriptionStatus: row.subscription_status
+            }
+            : null
+    };
+}
+
+const EMAIL_DELIVERY_SELECT = `
+    SELECT
+        d.id AS delivery_id,
+        d.payment_id AS delivery_payment_id,
+        d.customer_email AS delivery_customer_email,
+        d.license_product_id,
+        d.plan AS delivery_plan,
+        d.encrypted_license_key,
+        d.encryption_iv,
+        d.encryption_auth_tag,
+        d.download_url,
+        d.email_status,
+        d.resend_email_id,
+        d.email_sent_at,
+        d.email_error,
+        d.email_attempts,
+        p.id AS payment_id,
+        p.paypal_capture_id,
+        p.paypal_order_id,
+        p.paypal_event_id,
+        p.sku,
+        p.amount,
+        p.currency,
+        p.payment_status,
+        p.delivery_status,
+        p.customer_email AS payment_customer_email,
+        p.customer_name,
+        s.paypal_subscription_id,
+        s.current_period_end,
+        s.subscription_status
+    FROM commerce_deliveries d
+    JOIN commerce_payments p ON p.id = d.payment_id
+    LEFT JOIN commerce_subscriptions s ON s.paypal_subscription_id = p.paypal_order_id
+`;
 
 function rowToSubscription(row) {
     if (!row) {
@@ -306,6 +390,120 @@ export async function getDeliveryForCustomer({ email, productId }) {
          ORDER BY d.created_at DESC
          LIMIT 1`,
         [String(email || "").toLowerCase(), productId]
+    );
+    return rowToDelivery(result.rows[0]);
+}
+
+export async function getEmailDeliveryAudit(deliveryId) {
+    await migrateCommerceStore();
+
+    const result = await getPool().query(
+        `${EMAIL_DELIVERY_SELECT}
+         WHERE d.id = $1`,
+        [deliveryId]
+    );
+    return rowToEmailDelivery(result.rows[0]);
+}
+
+export async function claimEmailDelivery(deliveryId) {
+    await migrateCommerceStore();
+
+    const client = await getPool().connect();
+    try {
+        await client.query("BEGIN");
+        const result = await client.query(
+            `${EMAIL_DELIVERY_SELECT}
+             WHERE d.id = $1
+             FOR UPDATE OF d`,
+            [deliveryId]
+        );
+        const row = result.rows[0];
+        if (!row) {
+            await client.query("COMMIT");
+            return {
+                status: "not_found"
+            };
+        }
+        if (row.email_status === "sent") {
+            await client.query("COMMIT");
+            return {
+                status: "already_sent",
+                ...rowToEmailDelivery(row)
+            };
+        }
+        if (!row.encrypted_license_key) {
+            await client.query("COMMIT");
+            return {
+                status: "not_sendable",
+                reason: "encrypted_license_missing",
+                ...rowToEmailDelivery(row)
+            };
+        }
+        const claimed = await client.query(
+            `UPDATE commerce_deliveries
+             SET email_status = 'sending',
+                 email_attempts = email_attempts + 1,
+                 email_last_attempt_at = NOW(),
+                 email_error = NULL,
+                 updated_at = NOW()
+             WHERE id = $1
+             RETURNING *`,
+            [deliveryId]
+        );
+        await client.query(
+            "INSERT INTO commerce_audit_log (payment_id, action, metadata) VALUES ($1,$2,$3)",
+            [row.payment_id, "email_delivery_claimed", JSON.stringify({ deliveryId })]
+        );
+        await client.query("COMMIT");
+        return {
+            status: "claimed",
+            delivery: rowToDelivery(claimed.rows[0]),
+            payment: rowToEmailDelivery(row).payment,
+            subscription: row.paypal_subscription_id
+                ? {
+                    paypalSubscriptionId: row.paypal_subscription_id,
+                    currentPeriodEnd: row.current_period_end,
+                    subscriptionStatus: row.subscription_status
+                }
+                : null
+        };
+    } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+export async function markEmailDeliverySent({ deliveryId, resendEmailId }) {
+    await migrateCommerceStore();
+
+    const result = await getPool().query(
+        `UPDATE commerce_deliveries
+         SET email_status = 'sent',
+             resend_email_id = $2,
+             email_sent_at = NOW(),
+             email_error = NULL,
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING *`,
+        [deliveryId, resendEmailId || ""]
+    );
+    return rowToDelivery(result.rows[0]);
+}
+
+export async function markEmailDeliveryFailed({ deliveryId, status, errorSummary }) {
+    await migrateCommerceStore();
+
+    const result = await getPool().query(
+        `UPDATE commerce_deliveries
+         SET email_status = $2,
+             email_error = $3,
+             updated_at = NOW()
+         WHERE id = $1
+           AND email_status <> 'sent'
+         RETURNING *`,
+        [deliveryId, status, String(errorSummary || "email_delivery_failed").slice(0, 500)]
     );
     return rowToDelivery(result.rows[0]);
 }

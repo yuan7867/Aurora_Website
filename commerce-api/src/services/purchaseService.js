@@ -1,10 +1,10 @@
 import { getDownloadLink } from "../dispatchers/downloadDispatcher.js";
-import { sendLicenseEmail } from "../dispatchers/emailDispatcher.js";
 import { dispatchLicenseRequest } from "../dispatchers/productDispatcher.js";
 import { getCommerceProduct } from "../products.js";
 import { claimPayment, getDeliveryForCustomer, markManualRecovery, saveDelivery } from "../storage/commerceStore.js";
 import { savePurchase } from "../storage/customerStore.js";
 import { decryptLicenseKey, encryptLicenseKey } from "../utils/licenseCrypto.js";
+import { deliverLicenseEmail } from "./emailDeliveryService.js";
 import { createActivationForCustomer } from "./identityService.js";
 
 function normalizeStatus(status) {
@@ -168,20 +168,15 @@ export async function completePurchase({ productId, customer, paypal }) {
 
     const downloadLink = getDownloadLink(product.licenseProductId);
     const encryptedLicense = encryptLicenseKey(licenseKey);
-    const emailResult = await sendLicenseEmail({
-        customer,
-        productId: product.licenseProductId,
-        license,
-        downloadLink
-    });
     const delivery = await saveDelivery({
         paymentId: claimed.payment.id,
         customerEmail: customer.email,
         product,
         encryptedLicense,
         downloadUrl: downloadLink,
-        emailResult
+        emailResult: { status: "email_pending" }
     });
+    const emailResult = await deliverLicenseEmail({ deliveryId: delivery.id });
     const customerRecord = await savePurchase({
         customer,
         product,

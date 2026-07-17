@@ -23,7 +23,7 @@ test("Commerce saves encrypted delivery before acknowledging XAU raw key", () =>
     const saveIndex = service.indexOf("const delivery = await saveDelivery");
     const ackIndex = service.indexOf("await acknowledgeXauSubscriptionDelivery");
     const finalizeIndex = service.indexOf("const finalization = await finalizePaymentDelivery");
-    const emailIndex = service.indexOf("const emailResult = await sendLicenseEmail");
+    const emailIndex = service.indexOf("const emailResult = await deliverLicenseEmail");
 
     assert.ok(saveIndex > 0);
     assert.ok(ackIndex > saveIndex);

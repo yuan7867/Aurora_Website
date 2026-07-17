@@ -27,6 +27,7 @@ export const config = {
     xauDownloadUrl: process.env.XAU_DOWNLOAD_URL || "",
     emailApiUrl: process.env.EMAIL_API_URL || "",
     emailApiToken: process.env.EMAIL_API_TOKEN || "",
+    emailFrom: process.env.EMAIL_FROM || "Aurora HY <license@mail.aurorahy.com>",
     supportEmail: process.env.SUPPORT_EMAIL || "support@aurorahy.com",
     auroraCloudIngestToken: process.env.AURORA_CLOUD_INGEST_TOKEN || "",
     licenseDeliveryEncryptionKey: process.env.LICENSE_DELIVERY_ENCRYPTION_KEY || "",
