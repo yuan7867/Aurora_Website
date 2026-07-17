@@ -1,0 +1,17 @@
+{
+  "name": "aurora-mt5-license-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "migrate": "node src/migrate.js",
+    "test": "node --test",
+    "check": "node --check src/server.js && node --check src/migrate.js && node --check src/cli/issue-manual.js && node --check test/api.test.js",
+    "license:issue-manual": "node src/cli/issue-manual.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {}
+}
