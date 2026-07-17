@@ -8,9 +8,11 @@ import {
     getSubscriptionReconciliationState,
     recordSubscriptionPayment,
     saveManualRecoveryDelivery,
+    updateSubscriptionCustomerForRecovery,
     upsertSubscriptionFromPayPal
 } from "../storage/commerceStore.js";
 import { config } from "../config.js";
+import { processSubscriptionSale } from "../services/subscriptionService.js";
 
 function readArg(name, argv = process.argv) {
     const index = argv.indexOf(name);
@@ -25,11 +27,11 @@ function usage() {
     console.log([
         "Usage:",
         "  npm run subscription:reconcile -- --subscription-id SUB --sale-id SALE --event-id EVENT",
-        "  npm run subscription:reconcile -- --subscription-id SUB --sale-id SALE --event-id EVENT --confirm",
+        "  npm run subscription:reconcile -- --subscription-id SUB --sale-id SALE --event-id EVENT --customer-email CUSTOMER@EXAMPLE.COM --confirm",
         "  npm run subscription:reconcile -- --subscription-id SUB --sale-id SALE --event-id EVENT --mark-manual-recovery --confirm",
         "",
         "Default mode performs a read-only audit against PayPal, Commerce PostgreSQL, and XAU PostgreSQL.",
-        "Plain --confirm is fail-closed and never fabricates PayPal webhook events.",
+        "Plain --confirm is only allowed for retryable_before_license_issue after PayPal sale verification.",
         "Manual recovery does not call XAU activate/renew and does not create a new license."
     ].join("\n"));
 }
@@ -252,10 +254,60 @@ export async function markManualRecovery({ audit, sale, subscription, dependenci
     };
 }
 
+function buildVerifiedSaleEvent({ audit, sale }) {
+    return {
+        id: audit.eventId,
+        event_type: "PAYMENT.SALE.COMPLETED",
+        create_time: salePaidAt(sale),
+        resource: {
+            ...sale,
+            id: audit.saleId,
+            billing_agreement_id: audit.subscriptionId,
+            state: sale.state || sale.status || "COMPLETED"
+        }
+    };
+}
+
+export async function confirmRetryableBeforeLicenseIssue({
+    audit,
+    sale,
+    customerOverride = {},
+    dependencies = {}
+}) {
+    if (audit.classification !== "retryable_before_license_issue") {
+        return {
+            status: "rejected",
+            classification: audit.classification,
+            reason: "confirm_only_allowed_for_retryable_before_license_issue"
+        };
+    }
+
+    if (customerOverride.email || customerOverride.name) {
+        await (dependencies.updateSubscriptionCustomer || updateSubscriptionCustomerForRecovery)({
+            subscriptionId: audit.subscriptionId,
+            customer: customerOverride
+        });
+    }
+
+    const result = await (dependencies.processSale || processSubscriptionSale)({
+        event: buildVerifiedSaleEvent({ audit, sale })
+    });
+
+    return {
+        status: "reprocessed",
+        classification: audit.classification,
+        subscriptionId: audit.subscriptionId,
+        saleId: audit.saleId,
+        result
+    };
+}
+
 export async function run(argv = process.argv) {
     const subscriptionId = readArg("--subscription-id", argv);
     const saleId = readArg("--sale-id", argv);
     const eventId = readArg("--event-id", argv) || `manual-reconcile-${saleId}`;
+    const customerEmail = readArg("--customer-email", argv);
+    const customerName = readArg("--customer-name", argv);
     const confirm = hasFlag("--confirm", argv);
     const manualRecovery = hasFlag("--mark-manual-recovery", argv);
 
@@ -286,13 +338,20 @@ export async function run(argv = process.argv) {
     }
 
     if (!manualRecovery) {
+        const result = await confirmRetryableBeforeLicenseIssue({
+            audit,
+            sale,
+            customerOverride: {
+                email: customerEmail,
+                name: customerName
+            }
+        });
         console.log(JSON.stringify({
             mode: "confirm",
-            status: "rejected",
             ...audit,
-            safety: "Plain --confirm is disabled. Use --mark-manual-recovery --confirm only for legacy unrecoverable records."
+            recovery: result
         }, null, 2));
-        return audit.classification === "legacy_key_unrecoverable" ? 2 : 1;
+        return result.status === "reprocessed" ? 0 : 2;
     }
 
     const result = await markManualRecovery({ audit, sale, subscription });

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
     auditSubscriptionDelivery,
     classifyAudit,
+    confirmRetryableBeforeLicenseIssue,
     markManualRecovery
 } from "../src/cli/reconcileSubscriptionDelivery.js";
 import { config } from "../src/config.js";
@@ -218,6 +219,60 @@ test("manual recovery refuses non-legacy classifications", async () => {
         dependencies: {
             claimPayment: async () => {
                 throw new Error("should not write");
+            }
+        }
+    });
+
+    assert.equal(result.status, "rejected");
+});
+
+test("plain confirm reprocesses only retryable first sale from verified PayPal sale", async () => {
+    const calls = [];
+    const result = await confirmRetryableBeforeLicenseIssue({
+        audit: {
+            classification: "retryable_before_license_issue",
+            subscriptionId: "SUB-1",
+            saleId: "SALE-1",
+            eventId: "EVENT-1"
+        },
+        sale: sale(),
+        customerOverride: {
+            email: "ceo@example.com",
+            name: "CEO"
+        },
+        dependencies: {
+            updateSubscriptionCustomer: async ({ subscriptionId, customer }) => {
+                calls.push(["update-customer", subscriptionId, customer.email, customer.name]);
+            },
+            processSale: async ({ event }) => {
+                calls.push(["process-sale", event.event_type, event.resource.id, event.resource.billing_agreement_id]);
+                return { status: "activated" };
+            }
+        }
+    });
+
+    assert.equal(result.status, "reprocessed");
+    assert.deepEqual(calls, [
+        ["update-customer", "SUB-1", "ceo@example.com", "CEO"],
+        ["process-sale", "PAYMENT.SALE.COMPLETED", "SALE-1", "SUB-1"]
+    ]);
+});
+
+test("plain confirm rejects non-retryable state without writes", async () => {
+    const result = await confirmRetryableBeforeLicenseIssue({
+        audit: {
+            classification: "legacy_key_unrecoverable",
+            subscriptionId: "SUB-1",
+            saleId: "SALE-1",
+            eventId: "EVENT-1"
+        },
+        sale: sale(),
+        dependencies: {
+            updateSubscriptionCustomer: async () => {
+                throw new Error("should not update");
+            },
+            processSale: async () => {
+                throw new Error("should not process");
             }
         }
     });

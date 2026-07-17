@@ -63,6 +63,25 @@ test("retry after ACK failure finalizes existing encrypted delivery without rene
     assert.ok(renewAfterBranch > retryReturn);
 });
 
+test("first subscription sale activation is based on completed payment history not ACTIVE status", () => {
+    const historyIndex = service.indexOf("hasCompletedSubscriptionPaymentForSubscription(subscriptionId)");
+    const renewBranch = service.indexOf("if (hasCompletedPaymentHistory && existingDelivery?.encryptedLicenseKey)");
+    const renewIndex = service.indexOf("const license = await renewXauSubscription", renewBranch);
+    const activateIndex = service.indexOf("const license = await activateXauSubscription");
+
+    assert.ok(historyIndex > 0);
+    assert.ok(renewBranch > historyIndex);
+    assert.ok(renewIndex > renewBranch);
+    assert.ok(activateIndex > renewIndex);
+    assert.doesNotMatch(service, /subscriptionStatus\s*===\s*["']ACTIVE["']/);
+});
+
+test("PayPal webhook customer details cannot overwrite checkout delivery email", () => {
+    assert.match(store, /customer_email = COALESCE\(NULLIF\(commerce_subscriptions\.customer_email, ''\), EXCLUDED\.customer_email\)/);
+    assert.match(store, /customer_name = COALESCE\(NULLIF\(commerce_subscriptions\.customer_name, ''\), EXCLUDED\.customer_name\)/);
+    assert.match(service, /preserveStoredCustomer\(existingSubscription, extractCustomer\(details\)\)/);
+});
+
 test("failed subscription webhook events can be retried but processed events stay idempotent", () => {
     assert.match(store, /processing_status = 'processing'/);
     assert.match(store, /processing_status = 'failed'/);
@@ -86,8 +105,8 @@ test("XAU recovery and ack endpoints are internal client calls", () => {
 test("reconciliation CLI is dry-run unless --confirm is supplied", () => {
     assert.match(cli, /mode: "dry-run"/);
     assert.match(cli, /hasFlag\("--confirm", argv\)/);
-    assert.doesNotMatch(cli, /processSubscriptionSale/);
-    assert.match(cli, /Plain --confirm is disabled/);
+    assert.match(cli, /confirmRetryableBeforeLicenseIssue/);
+    assert.match(cli, /retryable_before_license_issue/);
     assert.match(cli, /--mark-manual-recovery/);
 });
 

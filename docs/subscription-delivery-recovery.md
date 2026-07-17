@@ -18,6 +18,10 @@ Payment finalization is atomic and idempotent. It only changes `PENDING_DELIVERY
 
 `BILLING.SUBSCRIPTION.ACTIVATED` only updates Commerce subscription status. XAU status sync is deferred until at least one subscription payment exists.
 
+The first `PAYMENT.SALE.COMPLETED` for a PayPal subscription is decided from Commerce payment history, not from PayPal or Commerce subscription status. If `commerce_subscription_payments` has no `COMPLETED` payment for the `paypal_subscription_id`, Commerce calls XAU `/api/v1/subscriptions/activate`. Only later completed sales for the same subscription call `/api/v1/subscriptions/renew`.
+
+Checkout `customer.email` is the license delivery email. PayPal subscriber or payer email can only fill an empty Commerce customer email and must not overwrite the Checkout value.
+
 ## Retry
 
 `commerce_subscription_events.processing_status='failed'` may be claimed again. `processed` events remain idempotent and are not re-executed.
@@ -42,7 +46,13 @@ Classifications:
 - `invalid_paypal_sale`: PayPal sale is missing or not completed.
 - `subscription_mismatch`: PayPal sale, subscription, plan or SKU does not match the request.
 
-Plain `--confirm` is fail-closed. It does not fabricate a webhook and never calls XAU activate or renew.
+Plain `--confirm` is only allowed for `retryable_before_license_issue`. It re-verifies the PayPal sale and subscription first, then reprocesses the verified sale through the normal `PAYMENT.SALE.COMPLETED` path. Use `--customer-email` to correct the license delivery address before processing:
+
+```bash
+npm run subscription:reconcile -- --subscription-id I-2YX738G9J4AJ --sale-id SALE_ID --event-id EVENT_ID --customer-email customer@gmail.com --confirm
+```
+
+This path must call XAU activate for the first completed sale because there is no completed Commerce subscription payment history. It does not construct a fake sale, does not call renew, and remains idempotent on retry.
 
 Legacy manual recovery requires both `--mark-manual-recovery` and `--confirm`:
 

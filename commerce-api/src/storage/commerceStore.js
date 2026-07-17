@@ -524,8 +524,8 @@ export async function recordSubscriptionCreated({ product, customer, subscriptio
             plan, paypal_plan_id, subscription_status
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
         ON CONFLICT (paypal_subscription_id) DO UPDATE SET
-            customer_email = EXCLUDED.customer_email,
-            customer_name = EXCLUDED.customer_name,
+            customer_email = COALESCE(NULLIF(commerce_subscriptions.customer_email, ''), EXCLUDED.customer_email),
+            customer_name = COALESCE(NULLIF(commerce_subscriptions.customer_name, ''), EXCLUDED.customer_name),
             sku = EXCLUDED.sku,
             license_product_id = EXCLUDED.license_product_id,
             plan = EXCLUDED.plan,
@@ -576,8 +576,8 @@ export async function upsertSubscriptionFromPayPal({ product, customer, subscrip
             plan, paypal_plan_id, subscription_status, current_period_start, current_period_end, grace_until
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
         ON CONFLICT (paypal_subscription_id) DO UPDATE SET
-            customer_email = EXCLUDED.customer_email,
-            customer_name = EXCLUDED.customer_name,
+            customer_email = COALESCE(NULLIF(commerce_subscriptions.customer_email, ''), EXCLUDED.customer_email),
+            customer_name = COALESCE(NULLIF(commerce_subscriptions.customer_name, ''), EXCLUDED.customer_name),
             sku = EXCLUDED.sku,
             license_product_id = EXCLUDED.license_product_id,
             plan = EXCLUDED.plan,
@@ -600,6 +600,25 @@ export async function upsertSubscriptionFromPayPal({ product, customer, subscrip
             periodStart || null,
             periodEnd || null,
             graceUntil || null
+        ]
+    );
+    return rowToSubscription(result.rows[0]);
+}
+
+export async function updateSubscriptionCustomerForRecovery({ subscriptionId, customer }) {
+    await migrateCommerceStore();
+
+    const result = await getPool().query(
+        `UPDATE commerce_subscriptions
+         SET customer_email = COALESCE(NULLIF($2, ''), customer_email),
+             customer_name = COALESCE(NULLIF($3, ''), customer_name),
+             updated_at = NOW()
+         WHERE paypal_subscription_id = $1
+         RETURNING *`,
+        [
+            subscriptionId,
+            String(customer.email || "").toLowerCase(),
+            customer.name || ""
         ]
     );
     return rowToSubscription(result.rows[0]);
@@ -778,6 +797,16 @@ export async function hasSubscriptionPaymentForSubscription(subscriptionId) {
 
     const result = await getPool().query(
         "SELECT id FROM commerce_subscription_payments WHERE paypal_subscription_id = $1 LIMIT 1",
+        [subscriptionId]
+    );
+    return result.rowCount > 0;
+}
+
+export async function hasCompletedSubscriptionPaymentForSubscription(subscriptionId) {
+    await migrateCommerceStore();
+
+    const result = await getPool().query(
+        "SELECT id FROM commerce_subscription_payments WHERE paypal_subscription_id = $1 AND UPPER(payment_status) = 'COMPLETED' LIMIT 1",
         [subscriptionId]
     );
     return result.rowCount > 0;
