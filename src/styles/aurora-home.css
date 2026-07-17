@@ -31,124 +31,35 @@ body {
 
 .aurora-home a { color: inherit; text-decoration: none; }
 
-.aurora-canvas {
+.aurora-film {
   position: absolute;
   z-index: -1;
   inset: 84px 0 0;
-  width: 100%;
-  height: calc(100% - 84px);
+  overflow: hidden;
   pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 100%, rgba(39, 101, 160, 0.13), transparent 38%),
-    linear-gradient(180deg, #020714 0%, #071328 72%, #020714 100%);
+  background: #020714;
 }
 
-.aurora-scene,
-.aurora-scene > * {
+.aurora-film__picture,
+.aurora-film__picture img,
+.aurora-film__shade {
   position: absolute;
   inset: 0;
-  pointer-events: none;
+  width: 100%;
+  height: 100%;
 }
 
-.aurora-scene { z-index: -2; overflow: hidden; }
+.aurora-film__picture img {
+  object-fit: cover;
+  object-position: 50% 58%;
+  transform: translate3d(0, 2.5%, 0);
+  animation: aurora-film-rise 30s ease-in-out infinite alternate;
+}
 
-.aurora-scene__night {
+.aurora-film__shade {
   background:
-    radial-gradient(circle at 50% 105%, rgba(67, 165, 255, 0.2), transparent 33%),
-    radial-gradient(circle at 50% 35%, rgba(38, 48, 92, 0.23), transparent 40%),
-    linear-gradient(180deg, #020714 0%, #061124 60%, #020714 100%);
-}
-
-.aurora-scene__stars {
-  opacity: 0.34;
-  background-image:
-    radial-gradient(circle, rgba(208, 245, 255, 0.8) 0 1px, transparent 1.4px),
-    radial-gradient(circle, rgba(146, 179, 255, 0.6) 0 0.8px, transparent 1.2px);
-  background-position: 12px 20px, 92px 120px;
-  background-size: 190px 190px, 260px 260px;
-  mask-image: linear-gradient(to bottom, transparent 5%, #000 35%, #000 85%, transparent);
-  animation: aurora-stars-drift 32s linear infinite;
-}
-
-.aurora-scene__stars--b {
-  opacity: 0.18;
-  transform: scale(1.25);
-  animation-duration: 48s;
-  animation-direction: reverse;
-}
-
-.aurora-curtain {
-  top: 18%;
-  bottom: -12%;
-  filter: blur(15px) saturate(112%);
-  mix-blend-mode: screen;
-  opacity: 0.5;
-  transform-origin: 50% 100%;
-  animation: aurora-rise 24s ease-in-out infinite alternate;
-}
-
-.aurora-curtain span {
-  position: absolute;
-  bottom: 0;
-  width: 23%;
-  height: 86%;
-  border-radius: 58% 42% 18% 14%;
-  background: linear-gradient(
-    to top,
-    rgba(91, 225, 255, 0.68),
-    rgba(91, 225, 255, 0.28) 38%,
-    rgba(111, 113, 255, 0.13) 66%,
-    transparent 94%
-  );
-  transform-origin: 50% 100%;
-  --aurora-rotate: 0deg;
-  --aurora-scale: 1;
-  animation: aurora-sway 19s ease-in-out infinite alternate;
-}
-
-.aurora-curtain--left { left: -15%; right: 44%; animation-delay: -4s; }
-.aurora-curtain--left span:nth-child(1) { left: 9%; --aurora-rotate: 7deg; --aurora-scale: .82; }
-.aurora-curtain--left span:nth-child(2) { left: 35%; --aurora-rotate: -2deg; --aurora-scale: .96; animation-delay: -3s; }
-.aurora-curtain--left span:nth-child(3) {
-  left: 62%;
-  --aurora-rotate: 3deg;
-  --aurora-scale: .88;
-  background: linear-gradient(to top, rgba(164, 122, 255, 0.72), rgba(71, 213, 255, 0.25) 58%, transparent 90%);
-  animation-delay: -6s;
-}
-
-.aurora-curtain--center { left: 28%; right: 28%; opacity: 0.28; animation-delay: -9s; }
-.aurora-curtain--center span:nth-child(1) { left: 22%; --aurora-scale: .68; }
-.aurora-curtain--center span:nth-child(2) { right: 18%; --aurora-scale: .72; animation-delay: -5s; }
-
-.aurora-curtain--right { left: 50%; right: -18%; animation-delay: -7s; }
-.aurora-curtain--right span:nth-child(1) { left: 4%; --aurora-rotate: -4deg; --aurora-scale: .88; animation-delay: -2s; }
-.aurora-curtain--right span:nth-child(2) {
-  left: 35%;
-  --aurora-rotate: 2deg;
-  --aurora-scale: .96;
-  background: linear-gradient(to top, rgba(122, 105, 255, 0.9), rgba(69, 210, 255, 0.28) 62%, transparent 92%);
-  animation-delay: -7s;
-}
-.aurora-curtain--right span:nth-child(3) {
-  left: 67%;
-  --aurora-rotate: -6deg;
-  --aurora-scale: .8;
-  background: linear-gradient(to top, rgba(231, 183, 102, 0.72), rgba(95, 220, 255, 0.36) 46%, transparent 90%);
-  animation-delay: -4s;
-}
-
-.aurora-scene__horizon {
-  top: auto;
-  bottom: -14%;
-  height: 34%;
-  background: radial-gradient(ellipse at 50% 60%, rgba(115, 229, 255, 0.2), transparent 62%);
-  filter: blur(14px);
-  animation: aurora-horizon-pulse 14s ease-in-out infinite alternate;
-}
-
-.aurora-scene__vignette {
-  background: radial-gradient(ellipse at center, transparent 38%, rgba(0, 3, 12, 0.72) 100%);
+    radial-gradient(ellipse at 50% 42%, transparent 0 31%, rgba(2, 7, 20, 0.08) 55%, rgba(2, 7, 20, 0.24) 100%),
+    linear-gradient(180deg, rgba(2, 7, 20, 0.32), transparent 30%, transparent 72%, rgba(2, 7, 20, 0.2));
 }
 
 .aurora-nav {
@@ -295,24 +206,14 @@ body {
 .aurora-trust h2 { margin: 0 0 6px; color: #f2f7ff; font-size: 14px; }
 .aurora-trust p { margin: 0; color: #8997ab; font-size: 12px; line-height: 1.45; }
 
-@keyframes aurora-rise {
-  0% { transform: translate3d(0, 2.5%, 0); opacity: 0.4; }
-  100% { transform: translate3d(0, -2.5%, 0); opacity: 0.56; }
-}
-@keyframes aurora-sway {
-  0% { transform: translate3d(-1.2%, 1.5%, 0) rotate(var(--aurora-rotate)) scaleY(var(--aurora-scale)); opacity: .72; }
-  100% { transform: translate3d(1.2%, -1.5%, 0) rotate(var(--aurora-rotate)) scaleY(var(--aurora-scale)); opacity: .94; }
-}
-@keyframes aurora-horizon-pulse {
-  0% { opacity: 0.42; transform: scaleX(0.96); }
-  100% { opacity: 0.64; transform: scaleX(1.02); }
-}
-@keyframes aurora-stars-drift {
-  to { transform: translate3d(30px, -38px, 0); }
-}
 @keyframes aurora-content-enter {
   from { opacity: 0; transform: translateY(18px); filter: blur(6px); }
   to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes aurora-film-rise {
+  0% { transform: translate3d(0, 2.5%, 0); }
+  100% { transform: translate3d(0, -1.5%, 0); }
 }
 
 @media (max-width: 1180px) {
@@ -348,22 +249,24 @@ body {
 
 @media (max-width: 760px) {
   .aurora-nav { min-height: 70px; padding: 0 18px; }
-  .aurora-canvas { inset: 70px 0 0; height: calc(100% - 70px); }
+  .aurora-film { inset: 70px 0 0; }
+  .aurora-film__picture img { object-position: 50% 64%; }
   .aurora-nav__links { top: 70px; }
   .aurora-brand__mark { width: 42px; height: 42px; }
   .aurora-brand__copy strong { font-size: 14px; }
   .aurora-brand__copy small { display: none; }
   .aurora-hero { min-height: calc(100svh - 70px); padding: 54px 20px 170px; }
   .aurora-hero__eyebrow { font-size: 9px; letter-spacing: 0.26em; }
-  .aurora-hero__title { font-size: clamp(58px, 20vw, 94px); line-height: 0.9; }
+  .aurora-hero__title { font-size: clamp(44px, 14vw, 54px); line-height: 0.9; }
   .aurora-hero__title span { display: block; }
-  .aurora-hero__statement { max-width: 340px; }
-  .aurora-hero__description { max-width: 500px; font-size: 14px; }
-  .aurora-hero__actions { width: min(100%, 430px); flex-direction: column; }
+  .aurora-hero__statement { width: min(100%, 260px); }
+  .aurora-hero__description { width: min(100%, 310px); }
+  .aurora-hero__statement { font-size: 18px; }
+  .aurora-hero__description { font-size: 14px; }
+  .aurora-hero__actions { width: min(100%, 240px); flex-direction: column; }
   .aurora-button { width: 100%; min-width: 0; min-height: 56px; }
   .aurora-trust { grid-template-columns: 1fr; margin-top: -130px; }
   .aurora-trust__item + .aurora-trust__item { border-top: 1px solid var(--aurora-line); border-left: 0; }
-  .aurora-curtain { filter: blur(22px); opacity: 0.5; }
 }
 
 @media (prefers-reduced-motion: reduce) {
