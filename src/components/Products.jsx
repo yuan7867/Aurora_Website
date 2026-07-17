@@ -40,6 +40,13 @@ const icons = {
             <path d="M15 9 9 15l-2-2 6-6c2.5-2.5 5.5-3.5 8-3-.5 2.5-1.5 5.5-4 8Z" />
             <path d="M14 6h4v4" />
         </svg>
+    ),
+    orbit: (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M3 12c3-6 15-6 18 0" />
+            <path d="M3 12c3 6 15 6 18 0" />
+        </svg>
     )
 };
 
@@ -99,6 +106,33 @@ const products = [
                 description: "Built for traders who accept higher intensity."
             }
         ]
+    },
+    {
+        title: "Aurora Luno",
+        strategy: "Coming Soon",
+        badge: "Future Product",
+        theme: "purple",
+        subtitle: "A future Aurora product currently in preparation.",
+        price: "Coming Soon",
+        billing: "Not available for purchase",
+        comingSoon: true,
+        features: [
+            {
+                icon: "orbit",
+                title: "In Development",
+                description: "Product scope will be announced when ready."
+            },
+            {
+                icon: "shield",
+                title: "Aurora Standard",
+                description: "Built under the Aurora commercial framework."
+            },
+            {
+                icon: "brain",
+                title: "Cloud Ready",
+                description: "Planned for future Aurora Cloud integration."
+            }
+        ]
     }
 ];
 
@@ -128,7 +162,7 @@ function Products() {
                         </div>
 
                         <div className="product-live-slot" aria-label={`${product.title} commercial access`}>
-                            <span>Commercial access through Aurora checkout</span>
+                            <span>{product.comingSoon ? "Coming soon. No checkout available." : "Commercial access through Aurora checkout"}</span>
                         </div>
 
                         <div className="product-features">
@@ -144,15 +178,21 @@ function Products() {
                         </div>
 
                         <div className="product-actions">
-                            <a href={product.checkout} className="product-buy">Choose Plan</a>
-                            <button
-                                type="button"
-                                className="product-learn"
-                                onClick={() => setCompareOpen((current) => !current)}
-                                aria-expanded={compareOpen}
-                            >
-                                Compare
-                            </button>
+                            {product.comingSoon ? (
+                                <span className="product-buy product-disabled" aria-disabled="true">Coming Soon</span>
+                            ) : (
+                                <>
+                                    <a href={product.checkout} className="product-buy">Choose Plan</a>
+                                    <button
+                                        type="button"
+                                        className="product-learn"
+                                        onClick={() => setCompareOpen((current) => !current)}
+                                        aria-expanded={compareOpen}
+                                    >
+                                        Compare
+                                    </button>
+                                </>
+                            )}
                         </div>
 
                         <div className="product-footer">

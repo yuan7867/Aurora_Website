@@ -15,11 +15,13 @@ import Login from "./pages/Login";
 import PayPalSuccess from "./pages/PayPalSuccess";
 import Pricing from "./pages/Pricing";
 import Product from "./pages/Product";
+import ProductsPage from "./pages/ProductsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Register from "./pages/Register";
 import ResetPassword from "./pages/ResetPassword";
 import TrustCenter from "./pages/TrustCenter";
 import VerifyEmail from "./pages/VerifyEmail";
+import LiveTradingPage from "./pages/LiveTradingPage";
 
 function App() {
   return (
@@ -33,6 +35,16 @@ function App() {
       <Route
         path="/product/:id"
         element={<Product />}
+      />
+
+      <Route
+        path="/products"
+        element={<ProductsPage />}
+      />
+
+      <Route
+        path="/performance"
+        element={<LiveTradingPage />}
       />
 
       <Route

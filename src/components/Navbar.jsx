@@ -7,7 +7,8 @@ function Navbar() {
     const location = useLocation();
     const [scrolled, setScrolled] = useState(false);
     const isHome = location.pathname === "/";
-    const isProductPage = location.pathname.startsWith("/product");
+    const isProductPage = location.pathname === "/products" || location.pathname.startsWith("/product");
+    const isLiveTrading = location.pathname === "/performance";
     const isPricing = location.pathname === "/pricing";
     const isTrust = location.pathname === "/trust";
     const isAccount = location.pathname.startsWith("/account");
@@ -27,8 +28,8 @@ function Navbar() {
 
     const publicLinks = [
         { label: "Home", href: isHome ? "#top" : "/", active: isHome },
-        { label: "Products", href: isHome ? "#products" : "/#products", active: isProductPage },
-        { label: "Live Trading", href: isHome ? "#performance" : "/#performance", active: false },
+        { label: "Products", href: "/products", active: isProductPage },
+        { label: "Live Trading", href: "/performance", active: isLiveTrading },
         { label: "Pricing", href: "/pricing", active: isPricing },
         { label: "Download", href: "/download", active: location.pathname === "/download" },
         { label: "Support", href: "/account/support", active: false },

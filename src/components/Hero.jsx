@@ -32,7 +32,7 @@ function Hero() {
                         </a>
 
                         <a
-                            href="#performance"
+                            href="/performance"
                             className="hero-button hero-button-secondary"
                         >
                             Watch Live Trading
@@ -40,11 +40,6 @@ function Hero() {
                     </div>
 
                 </div>
-            </div>
-
-            <div className="hero-scroll-hint" aria-hidden="true">
-                <span>Explore</span>
-                <i />
             </div>
         </section>
     );

@@ -9,9 +9,9 @@ function Footer() {
             </div>
 
             <div className="footer-links" aria-label="Footer navigation">
-                <a href="/#products">Products</a>
+                <a href="/products">Products</a>
                 <a href="/pricing">Pricing</a>
-                <a href="/#faq">FAQ</a>
+                <a href="/performance">Live Trading</a>
                 <a href="/trust">Trust Center</a>
                 <a href="/checkout?product=aurora-mt5-ai">Buy Now</a>
             </div>

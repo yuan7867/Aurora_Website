@@ -4,6 +4,16 @@
     padding: 156px 24px 96px;
 }
 
+.products-page .products,
+.live-trading-page .live-performance-center {
+    width: 100%;
+    padding: 0 0 96px;
+}
+
+.live-trading-page .v4-section-heading {
+    display: none;
+}
+
 .customer-hero {
     max-width: 880px;
     margin-bottom: 54px;

@@ -5,6 +5,10 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://aurorahy.com/products</loc>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://aurorahy.com/product/mt5</loc>
     <priority>0.8</priority>
   </url>
@@ -14,6 +18,10 @@
   </url>
   <url>
     <loc>https://aurorahy.com/pricing</loc>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://aurorahy.com/performance</loc>
     <priority>0.7</priority>
   </url>
   <url>
