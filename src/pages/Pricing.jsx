@@ -54,7 +54,6 @@ function Pricing() {
                         ) : (
                             <span className="customer-button is-disabled" aria-disabled="true">Choose Product</span>
                         )}
-                        <a className="customer-button secondary" href="/book-demo">Book Demo</a>
                     </div>
                 </section>
 

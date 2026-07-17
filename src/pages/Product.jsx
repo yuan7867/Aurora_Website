@@ -112,10 +112,6 @@ function Product() {
             },
             actions: [
                 {
-                    label: "Book Demo",
-                    href: "/book-demo"
-                },
-                {
                     label: "Compare Plans",
                     href: "/pricing",
                     variant: "secondary"

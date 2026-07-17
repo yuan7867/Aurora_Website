@@ -7,7 +7,6 @@ import AccountLicenses from "./pages/account/AccountLicenses";
 import AccountProducts from "./pages/account/AccountProducts";
 import AccountSupport from "./pages/account/AccountSupport";
 import AccountUpdates from "./pages/account/AccountUpdates";
-import BookDemo from "./pages/BookDemo";
 import Checkout from "./pages/Checkout";
 import DownloadCenter from "./pages/DownloadCenter";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -39,11 +38,6 @@ function App() {
       <Route
         path="/pricing"
         element={<Pricing />}
-      />
-
-      <Route
-        path="/book-demo"
-        element={<BookDemo />}
       />
 
       <Route

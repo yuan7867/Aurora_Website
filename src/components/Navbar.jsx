@@ -32,8 +32,7 @@ function Navbar() {
         { label: "Pricing", href: "/pricing", active: isPricing },
         { label: "Download", href: "/download", active: location.pathname === "/download" },
         { label: "Support", href: "/account/support", active: false },
-        { label: "Trust", href: isHome ? "#trust" : "/trust", active: isTrust },
-        { label: "Contact", href: "/book-demo", active: false }
+        { label: "Trust", href: isHome ? "#trust" : "/trust", active: isTrust }
     ];
     const accountLinks = [
         { label: "Dashboard", href: "/account", active: location.pathname === "/account" },

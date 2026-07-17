@@ -151,7 +151,6 @@ function TrustCenter() {
                     </p>
                     <div className="customer-actions">
                         <a className="customer-button" href="/pricing">Compare Plans</a>
-                        <a className="customer-button secondary" href="/book-demo">Book Demo</a>
                     </div>
                 </section>
 
