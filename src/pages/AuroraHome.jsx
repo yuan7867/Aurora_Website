@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import AuroraLogo from "../components/AuroraLogo";
-import AuroraBackground from "../components/AuroraBackground";
+import AuroraCanvas from "../components/AuroraCanvas";
 import "../styles/aurora-home.css";
 
 const navigation = [
@@ -33,7 +33,7 @@ export default function AuroraHome() {
 
   return (
     <main className="aurora-home">
-      <AuroraBackground />
+      <AuroraCanvas />
 
       <header className="aurora-nav">
         <Link to="/" className="aurora-nav__brand" aria-label="Aurora HY home">
@@ -66,10 +66,6 @@ export default function AuroraHome() {
       </header>
 
       <section className="aurora-hero" aria-labelledby="aurora-title">
-        <div className="aurora-hero__emblem" aria-hidden="true">
-          <AuroraLogo compact />
-        </div>
-
         <p className="aurora-hero__eyebrow">CLARITY BEYOND THE HORIZON</p>
 
         <h1 id="aurora-title" className="aurora-hero__title">
