@@ -52,8 +52,10 @@ body {
 .aurora-film__picture img {
   object-fit: cover;
   object-position: 50% 58%;
-  transform: translate3d(0, 2.5%, 0);
-  animation: aurora-film-rise 30s ease-in-out infinite alternate;
+  transform: translate3d(0, 4.5%, 0) scale(1.06);
+  transform-origin: 50% 100%;
+  will-change: transform, filter;
+  animation: aurora-film-rise 18s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
 }
 
 .aurora-film__shade {
@@ -212,8 +214,14 @@ body {
 }
 
 @keyframes aurora-film-rise {
-  0% { transform: translate3d(0, 2.5%, 0); }
-  100% { transform: translate3d(0, -1.5%, 0); }
+  0% {
+    transform: translate3d(0, 4.5%, 0) scale(1.06);
+    filter: brightness(0.94) saturate(0.96);
+  }
+  100% {
+    transform: translate3d(0, -3.5%, 0) scale(1.06);
+    filter: brightness(1.04) saturate(1.03);
+  }
 }
 
 @media (max-width: 1180px) {
@@ -250,7 +258,10 @@ body {
 @media (max-width: 760px) {
   .aurora-nav { min-height: 70px; padding: 0 18px; }
   .aurora-film { inset: 70px 0 0; }
-  .aurora-film__picture img { object-position: 50% 64%; }
+  .aurora-film__picture img {
+    object-position: 50% 64%;
+    animation-duration: 21s;
+  }
   .aurora-nav__links { top: 70px; }
   .aurora-brand__mark { width: 42px; height: 42px; }
   .aurora-brand__copy strong { font-size: 14px; }
