@@ -484,6 +484,77 @@ export async function updatePaymentDeliveryStatus({ captureId, status }) {
     );
 }
 
+export async function finalizePaymentDelivery({ captureId }) {
+    await migrateCommerceStore();
+
+    const client = await getPool().connect();
+    try {
+        await client.query("BEGIN");
+        const existing = await client.query(
+            `SELECT p.*
+             FROM commerce_payments p
+             JOIN commerce_deliveries d ON d.payment_id = p.id
+             WHERE p.paypal_capture_id = $1
+               AND d.encrypted_license_key IS NOT NULL
+             FOR UPDATE`,
+            [captureId]
+        );
+
+        if (existing.rowCount === 0) {
+            await client.query("COMMIT");
+            return {
+                finalized: false,
+                reason: "encrypted_delivery_missing"
+            };
+        }
+
+        const payment = existing.rows[0];
+        if (payment.payment_status === "COMPLETED" && payment.delivery_status === "delivered") {
+            await client.query("COMMIT");
+            return {
+                finalized: true,
+                alreadyFinalized: true,
+                payment: rowToPayment(payment)
+            };
+        }
+
+        const updated = await client.query(
+            `UPDATE commerce_payments
+             SET payment_status = 'COMPLETED',
+                 delivery_status = 'delivered',
+                 updated_at = NOW()
+             WHERE id = $1
+               AND payment_status = 'PENDING_DELIVERY'
+             RETURNING *`,
+            [payment.id]
+        );
+
+        if (updated.rowCount === 0) {
+            await client.query("COMMIT");
+            return {
+                finalized: false,
+                reason: "payment_not_pending_delivery",
+                payment: rowToPayment(payment)
+            };
+        }
+
+        await auditWithClient(client, payment.id, "payment_delivery_finalized", {
+            paypalCaptureId: captureId
+        });
+        await client.query("COMMIT");
+        return {
+            finalized: true,
+            alreadyFinalized: false,
+            payment: rowToPayment(updated.rows[0])
+        };
+    } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 export async function hasSubscriptionPayment(saleId) {
     await migrateCommerceStore();
 

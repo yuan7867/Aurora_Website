@@ -22,11 +22,45 @@ test("subscription sale records pending Commerce payment before XAU activation",
 test("Commerce saves encrypted delivery before acknowledging XAU raw key", () => {
     const saveIndex = service.indexOf("const delivery = await saveDelivery");
     const ackIndex = service.indexOf("await acknowledgeXauSubscriptionDelivery");
+    const finalizeIndex = service.indexOf("const finalization = await finalizePaymentDelivery");
     const emailIndex = service.indexOf("const emailResult = await sendLicenseEmail");
 
     assert.ok(saveIndex > 0);
     assert.ok(ackIndex > saveIndex);
-    assert.ok(emailIndex > ackIndex);
+    assert.ok(finalizeIndex > ackIndex);
+    assert.ok(emailIndex > finalizeIndex);
+});
+
+test("payment finalization requires encrypted delivery and pending payment", () => {
+    assert.match(store, /export async function finalizePaymentDelivery/);
+    assert.match(store, /JOIN commerce_deliveries d ON d\.payment_id = p\.id/);
+    assert.match(store, /d\.encrypted_license_key IS NOT NULL/);
+    assert.match(store, /payment_status = 'PENDING_DELIVERY'/);
+    assert.match(store, /SET payment_status = 'COMPLETED',\s+delivery_status = 'delivered'/);
+});
+
+test("ACK failure cannot finalize payment before encrypted delivery is acknowledged", () => {
+    const saveIndex = service.indexOf("const delivery = await saveDelivery");
+    const ackIndex = service.indexOf("await acknowledgeXauSubscriptionDelivery");
+    const finalizeIndex = service.indexOf("const finalization = await finalizePaymentDelivery");
+
+    assert.ok(saveIndex > 0);
+    assert.ok(ackIndex > saveIndex);
+    assert.ok(finalizeIndex > ackIndex);
+});
+
+test("retry after ACK failure finalizes existing encrypted delivery without renewing or reactivating", () => {
+    const retryBranch = service.indexOf("if (existingSubscriptionPayment && existingDelivery?.encryptedLicenseKey)");
+    const retryAck = service.indexOf("await acknowledgeXauSubscriptionDelivery({ paypal });", retryBranch);
+    const retryFinalize = service.indexOf("await finalizePaymentDelivery({ captureId: saleId });", retryBranch);
+    const retryReturn = service.indexOf("status: \"finalized\"", retryBranch);
+    const renewAfterBranch = service.indexOf("const license = await renewXauSubscription", retryBranch);
+
+    assert.ok(retryBranch > 0);
+    assert.ok(retryAck > retryBranch);
+    assert.ok(retryFinalize > retryAck);
+    assert.ok(retryReturn > retryFinalize);
+    assert.ok(renewAfterBranch > retryReturn);
 });
 
 test("failed subscription webhook events can be retried but processed events stay idempotent", () => {

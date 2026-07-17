@@ -17,6 +17,7 @@ import {
 } from "../products.js";
 import {
     finishSubscriptionEvent,
+    finalizePaymentDelivery,
     getDeliveryForCustomer,
     getSubscriptionPayment,
     getSubscriptionForCustomer,
@@ -27,7 +28,6 @@ import {
     markManualRecovery,
     recordSubscriptionPayment,
     saveDelivery,
-    updatePaymentDeliveryStatus,
     upsertSubscriptionFromPayPal
 } from "../storage/commerceStore.js";
 import { savePurchase } from "../storage/customerStore.js";
@@ -195,6 +195,14 @@ async function saveInitialSubscriptionDelivery({ product, customer, paypal, lice
     });
 
     await acknowledgeXauSubscriptionDelivery({ paypal });
+    const finalization = await finalizePaymentDelivery({ captureId: paypal.saleId });
+
+    if (!finalization.finalized) {
+        const error = new Error("Commerce payment could not be finalized after XAU ACK.");
+        error.code = "PAYMENT_FINALIZATION_FAILED";
+        error.statusCode = 500;
+        throw error;
+    }
 
     const emailResult = await sendLicenseEmail({
         customer,
@@ -292,6 +300,33 @@ export async function processSubscriptionSale({ event }) {
 
     const existingDelivery = await getDeliveryForCustomer({ email: customer.email, productId: product.productId });
 
+    if (existingSubscriptionPayment && existingDelivery?.encryptedLicenseKey) {
+        await acknowledgeXauSubscriptionDelivery({ paypal });
+        const finalization = await finalizePaymentDelivery({ captureId: saleId });
+
+        if (!finalization.finalized) {
+            const error = new Error("Commerce payment could not be finalized after XAU ACK.");
+            error.code = "PAYMENT_FINALIZATION_FAILED";
+            error.statusCode = 500;
+            throw error;
+        }
+
+        await recordSubscriptionPayment({
+            saleId,
+            subscriptionId,
+            eventId: event.id,
+            amount: amount.value,
+            currency: amount.currency,
+            paymentStatus: resource.state || resource.status || "COMPLETED",
+            paidAt: resource.create_time || event.create_time || new Date().toISOString()
+        });
+        return {
+            status: "finalized",
+            subscription,
+            delivery: existingDelivery
+        };
+    }
+
     if (existingDelivery?.encryptedLicenseKey) {
         const license = await renewXauSubscription({ product, customer, paypal });
         await recordSubscriptionPayment({
@@ -358,7 +393,6 @@ export async function processSubscriptionSale({ event }) {
         paymentStatus: resource.state || resource.status || "COMPLETED",
         paidAt: resource.create_time || event.create_time || new Date().toISOString()
     });
-    await updatePaymentDeliveryStatus({ captureId: saleId, status: "delivered" });
 
     return {
         status: "activated",

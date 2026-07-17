@@ -11,7 +11,10 @@ Phase C2.5 makes PayPal subscription delivery cross-service safe.
 5. XAU returns the raw license key once and stores an encrypted pending recovery copy.
 6. Commerce immediately encrypts and saves the license in `commerce_deliveries`.
 7. Commerce ACKs XAU delivery; XAU deletes the encrypted pending recovery copy.
-8. Commerce marks payment and event completed.
+8. Commerce finalizes `commerce_payments.payment_status='COMPLETED'` and `delivery_status='delivered'`.
+9. Commerce marks the webhook event processed.
+
+Payment finalization is atomic and idempotent. It only changes `PENDING_DELIVERY` to `COMPLETED` when an encrypted Commerce delivery exists and the XAU ACK has already succeeded. `email_pending` is independent and does not block payment completion.
 
 `BILLING.SUBSCRIPTION.ACTIVATED` only updates Commerce subscription status. XAU status sync is deferred until at least one subscription payment exists.
 
