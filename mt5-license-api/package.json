@@ -7,7 +7,7 @@
     "start": "node src/server.js",
     "migrate": "node src/migrate.js",
     "test": "node --test",
-    "check": "node --check src/server.js && node --check src/migrate.js && node --check src/cli/issue-manual.js && node --check test/api.test.js",
+    "check": "node --check src/server.js && node --check src/migrate.js && node --check src/cli/issue-manual.js && node --check test/api.test.js && node --check test/cli.test.js && node --check test/lifecycle.test.js && node --check test/postgresStore.test.js && node --check test/security.test.js",
     "license:issue-manual": "node src/cli/issue-manual.js"
   },
   "dependencies": {

@@ -17,7 +17,8 @@ function samePayment(existing, request) {
 }
 
 export class InMemoryStore {
-  constructor() {
+  constructor({ now = "2026-07-17T12:00:00.000Z" } = {}) {
+    this.now = now;
     this.migrationComplete = true;
     this.licenses = [];
     this.payments = [];
@@ -134,15 +135,21 @@ export class InMemoryStore {
   }
 
   async updateSubscriptionStatus(request) {
-    if (this.events.some((event) => event.paypalEventId === request.paypalEventId)) {
-      return { alreadyProcessed: true, ignored: true };
-    }
     const license = this.licenses.find((item) => item.paypalSubscriptionId === request.paypalSubscriptionId);
     if (!license) {
       throw conflict("subscription_not_found", "subscriptionId does not exist.");
     }
+    if (this.events.some((event) => event.paypalEventId === request.paypalEventId)) {
+      return { alreadyProcessed: true, ignored: true, license: clone(license) };
+    }
+    const ordering = this.lifecycleEventOrdering(license, request);
     this.events.push({ ...request });
+    if (ordering.stale) {
+      this.audit.push({ licenseId: license.id, action: "subscription_status_event_ignored", reason: ordering.reason });
+      return { alreadyProcessed: false, ignored: true, stale: true, reason: ordering.reason, license: clone(license) };
+    }
     license.subscriptionStatus = request.status;
+    license.latestSubscriptionEventAt = request.eventTime;
     if (request.status === "PAYMENT_FAILED") {
       license.graceUntil = new Date(new Date(request.eventTime).getTime() + GRACE_HOURS * 60 * 60 * 1000).toISOString();
     }
@@ -158,7 +165,7 @@ export class InMemoryStore {
     if (!license) {
       return { valid: false, reason: "license_not_found" };
     }
-    const validity = this.subscriptionValidity(license, new Date());
+    const validity = this.subscriptionValidity(license, new Date(this.now));
     if (!validity.valid) {
       return { valid: false, reason: validity.reason, license: clone(license) };
     }
@@ -207,5 +214,20 @@ export class InMemoryStore {
     if (status === "CANCELLED") return paidValid ? { valid: true } : { valid: false, reason: "subscription_cancelled" };
     if (status === "EXPIRED") return { valid: false, reason: "license_expired" };
     return { valid: false, reason: "subscription_suspended" };
+  }
+
+  lifecycleEventOrdering(license, request) {
+    if (!license.latestSubscriptionEventAt) {
+      return { stale: false };
+    }
+    const incoming = new Date(request.eventTime).getTime();
+    const latest = new Date(license.latestSubscriptionEventAt).getTime();
+    if (incoming < latest) {
+      return { stale: true, reason: "older_than_latest_event" };
+    }
+    if (incoming === latest) {
+      return { stale: true, reason: "same_timestamp_tiebreak" };
+    }
+    return { stale: false };
   }
 }

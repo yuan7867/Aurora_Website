@@ -159,6 +159,28 @@ test("invalid sku, price, currency, and permanent HTTP issue are rejected", asyn
   }
 });
 
+test("wrong product is rejected", async () => {
+  const app = await start();
+  try {
+    const result = await requestJson(app.url, "/api/v1/subscriptions/activate", activatePayload({ productId: "AURORA-XAU-AI" }));
+    assert.equal(result.status, 400);
+    assert.equal(result.data.code, "invalid_product");
+  } finally {
+    await app.close();
+  }
+});
+
+test("SKU and plan mismatch is rejected", async () => {
+  const app = await start();
+  try {
+    const result = await requestJson(app.url, "/api/v1/subscriptions/activate", activatePayload({ sku: "aurora-mt5-yearly", plan: "monthly" }));
+    assert.equal(result.status, 400);
+    assert.equal(result.data.code, "invalid_plan");
+  } finally {
+    await app.close();
+  }
+});
+
 test("unauthorized internal calls are rejected with constant-time path", async () => {
   const app = await start();
   try {
@@ -180,6 +202,24 @@ test("duplicate subscription and duplicate conflicting sale are protected", asyn
     const conflictingSale = await requestJson(app.url, "/api/v1/subscriptions/activate", activatePayload({ paypal: { ...activatePayload().paypal, periodEnd: "2026-09-16T00:00:00.000Z" } }));
     assert.equal(conflictingSale.status, 409);
     assert.equal(conflictingSale.data.code, "subscription_payment_conflict");
+  } finally {
+    await app.close();
+  }
+});
+
+test("concurrent activate for same subscription and sale produces one license and one pending delivery", async () => {
+  const app = await start();
+  try {
+    const [first, second] = await Promise.all([
+      requestJson(app.url, "/api/v1/subscriptions/activate", activatePayload()),
+      requestJson(app.url, "/api/v1/subscriptions/activate", activatePayload())
+    ]);
+    assert.equal(first.status, 200);
+    assert.equal(second.status, 200);
+    assert.equal([first.data, second.data].filter((item) => item.licenseKey).length, 1);
+    assert.equal(app.store.licenses.length, 1);
+    assert.equal(app.store.payments.length, 1);
+    assert.equal(app.store.pendingDeliveries.length, 1);
   } finally {
     await app.close();
   }
@@ -270,6 +310,25 @@ test("account binding accepts same account and rejects different account", async
     assert.equal(second.data.valid, true);
     assert.equal(wrong.data.valid, false);
     assert.equal(wrong.data.reason, "account_not_allowed");
+  } finally {
+    await app.close();
+  }
+});
+
+test("same-account concurrent first binding returns valid for both and one active binding", async () => {
+  const app = await start();
+  try {
+    const activated = await requestJson(app.url, "/api/v1/subscriptions/activate", activatePayload());
+    const [first, second] = await Promise.all([
+      requestJson(app.url, "/api/aurora-mt5-ai-trader/license", botPayload(activated.data.licenseKey), ""),
+      requestJson(app.url, "/api/aurora-mt5-ai-trader/license", botPayload(activated.data.licenseKey), "")
+    ]);
+    assert.equal(first.data.valid, true);
+    assert.equal(second.data.valid, true);
+    assert.deepEqual(app.store.licenses[0].binding, {
+      accountLogin: "160097919",
+      accountServer: "STARTRADERFinancial-Demo"
+    });
   } finally {
     await app.close();
   }

@@ -197,13 +197,38 @@ Business failure returns HTTP 200:
 
 History is never deleted. Status updates do not create new license keys.
 
+## Stale Event Ordering Policy
+
+Lifecycle status events are ordered with `latest_subscription_event_at` while the target license row is locked by `SELECT ... FOR UPDATE`.
+
+- Newer `eventTime`: process and mutate lifecycle state.
+- Older `eventTime`: ignore as stale, keep all license validity fields unchanged, and write `subscription_status_event_ignored` audit.
+- Same `eventTime` and same event ID: idempotent replay.
+- Same `eventTime` and different event ID: deterministic stale tie-break; the event is ignored instead of allowing uncertain overwrite.
+
+Ignored stale events do not update `subscription_status`, paid-through period, grace, cancelled/suspended timestamps, or manual review reason. They do not change client validation results and audit detail excludes PayPal raw payload.
+
+Only renewals move paid-through dates. `PAYMENT_FAILED` cannot overwrite a newer paid-through renewal. `CANCELLED` preserves paid-through. `SUSPENDED`, `REFUNDED`, and `REVERSED` stop validation immediately only when they are the newest lifecycle event. A stale `EXPIRED` cannot override a newer `ACTIVE`, and a stale `ACTIVE` cannot restore a newer terminal state.
+
 ## Recovery and ACK Protocol
 
 Activation generates a raw key, stores only its HMAC hash in `mt5_licenses`, and stores an encrypted copy in `mt5_pending_license_deliveries`. Commerce can recover the raw key only before ACK. After ACK, the encrypted key, IV, and auth tag are cleared. ACK replay is idempotent.
 
+## Concurrent Activate Behavior
+
+Activate is guarded by unique PayPal sale and subscription constraints. PostgreSQL `23505` is handled by re-querying the existing payment/subscription and returning a stable business result:
+
+- Same sale and same subscription replay: existing license metadata is returned without raw key.
+- Different subscription using the same sale ID: stable conflict.
+- Same subscription using a different first sale: stable conflict and no second license.
+
+Only `23505` unique conflicts are converted. Connection, serialization, syntax, permission, and other database errors roll back and are rethrown.
+
 ## Account Binding
 
 The first successful validation atomically binds the license to `account_login` and `account_server`. Later validations must use the same account and server. Different account attempts return `valid: false` and `account_not_allowed`. The optional `machine_hint` is hashed only; high-sensitivity cleartext machine identity is not stored.
+
+Concurrent first binding is safe. The first insert wins; if PostgreSQL returns `23505`, the API re-queries the actual active binding. Same account/server returns `valid: true`; different account/server returns HTTP 200 with `valid: false` and `account_not_allowed`. Non-`23505` errors are rethrown.
 
 ## Database Tables
 
@@ -240,6 +265,8 @@ npm run license:issue-manual -- --permanent --confirm --email customer@example.c
 
 The CLI defaults to refusal unless both `--permanent` and `--confirm` are present. It returns the raw key once and stores only the hash.
 
+The CLI rejects PayPal/payment identifiers and unknown arguments before database access or key generation. Rejected identifiers include `--paypal-sale-id`, `--paypal-subscription-id`, `--paypal-event-id`, `--sale-id`, `--subscription-id`, `--event-id`, `--payment-id`, `--capture-id`, and `--order-id`. `--dry-run` with `--permanent --confirm` performs no write and generates no key.
+
 ## Security
 
 - License keys use at least `crypto.randomBytes(16)`.
@@ -267,3 +294,7 @@ The CLI defaults to refusal unless both `--permanent` and `--confirm` are presen
 - Delivery encryption and ACK wired.
 - MT5 client points to the production validation endpoint.
 - No permanent/lifetime/bundle/one-time public sales path enabled.
+
+## Test Coverage Summary
+
+Direct tests cover monthly/yearly activation, wrong product, invalid SKU, SKU/plan mismatch, invalid amount/currency, HTTP permanent rejection, raw key first response only, activate replay, concurrent activate, subscription duplicate, sale duplicate, renew without new key, renew replay, all lifecycle statuses, stale event ordering, same timestamp tie-break, recovery before/after ACK, ACK replay, first binding, same-account concurrent binding, different-account concurrent binding, advisory migration lock, migration failure readiness, bearer token boundaries, HMAC stability, recovery encryption tamper resistance, health/ready no leakage, manual CLI flag enforcement, manual CLI payment identifier rejection, and non-`23505` DB error rethrow.

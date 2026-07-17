@@ -8,7 +8,7 @@ import { conflict } from "../errors.js";
 import { GRACE_HOURS, PRODUCT_ID } from "../constants.js";
 
 const { Pool } = pg;
-const MIGRATION_LOCK_KEY = 76020041;
+export const MIGRATION_LOCK_KEY = 76020041;
 
 function rowToLicense(row) {
   if (!row) {
@@ -59,6 +59,7 @@ export class PostgresStore {
     const files = (await readdir(join(baseDir, "migrations"))).filter((file) => file.endsWith(".sql")).sort();
     const client = await this.pool.connect();
     let locked = false;
+    let migrationError = null;
     this.migrationComplete = false;
     try {
       await client.query("SELECT pg_advisory_lock($1)", [MIGRATION_LOCK_KEY]);
@@ -67,9 +68,18 @@ export class PostgresStore {
         await client.query(await readFile(join(baseDir, "migrations", file), "utf8"));
       }
       this.migrationComplete = true;
+    } catch (error) {
+      migrationError = error;
+      throw error;
     } finally {
       if (locked) {
-        await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK_KEY]);
+        try {
+          await client.query("SELECT pg_advisory_unlock($1)", [MIGRATION_LOCK_KEY]);
+        } catch (unlockError) {
+          if (!migrationError) {
+            throw unlockError;
+          }
+        }
       }
       client.release();
     }
@@ -172,7 +182,7 @@ export class PostgresStore {
     } catch (error) {
       await client.query("ROLLBACK");
       if (error.code === "23505") {
-        throw conflict("subscription_unique_conflict", "Subscription or sale already exists.");
+        return this.resolveActivateUniqueConflict(request);
       }
       throw error;
     } finally {
@@ -233,16 +243,31 @@ export class PostgresStore {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");
-      const event = await client.query("SELECT * FROM mt5_subscription_events WHERE event_id = $1", [request.paypalEventId]);
-      if (event.rowCount > 0) {
-        await client.query("COMMIT");
-        return { alreadyProcessed: true, ignored: true };
-      }
       const found = await client.query("SELECT * FROM mt5_licenses WHERE paypal_subscription_id = $1 FOR UPDATE", [request.paypalSubscriptionId]);
       if (found.rowCount === 0) {
         throw conflict("subscription_not_found", "subscriptionId does not exist.");
       }
       const license = found.rows[0];
+      const event = await client.query("SELECT * FROM mt5_subscription_events WHERE event_id = $1", [request.paypalEventId]);
+      if (event.rowCount > 0) {
+        await client.query("COMMIT");
+        return { alreadyProcessed: true, ignored: true, license: rowToLicense(license) };
+      }
+      const ordering = this.lifecycleEventOrdering(license, request);
+      if (ordering.stale) {
+        await client.query(
+          "INSERT INTO mt5_subscription_events (license_id, paypal_subscription_id, event_id, event_status, event_time) VALUES ($1,$2,$3,$4,$5)",
+          [license.id, request.paypalSubscriptionId, request.paypalEventId, request.status, request.eventTime]
+        );
+        await this.auditWithClient(client, license.id, "subscription_status_event_ignored", "api", {
+          subscriptionId: request.paypalSubscriptionId,
+          eventId: request.paypalEventId,
+          status: request.status,
+          reason: ordering.reason
+        });
+        await client.query("COMMIT");
+        return { alreadyProcessed: false, ignored: true, stale: true, reason: ordering.reason, license: rowToLicense(license) };
+      }
       await client.query(
         "INSERT INTO mt5_subscription_events (license_id, paypal_subscription_id, event_id, event_status, event_time) VALUES ($1,$2,$3,$4,$5)",
         [license.id, request.paypalSubscriptionId, request.paypalEventId, request.status, request.eventTime]
@@ -267,9 +292,62 @@ export class PostgresStore {
     } catch (error) {
       await client.query("ROLLBACK");
       if (error.code === "23505") {
-        return { alreadyProcessed: true, ignored: true };
+        return this.resolveStatusUniqueConflict(request);
       }
       throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async resolveActivateUniqueConflict(request) {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const payment = await client.query(
+        `SELECT l.*, p.paypal_subscription_id AS payment_subscription_id,
+                p.amount AS payment_amount, p.currency AS payment_currency,
+                p.period_start AS payment_period_start, p.period_end AS payment_period_end
+         FROM mt5_subscription_payments p
+         JOIN mt5_licenses l ON l.id = p.license_id
+         WHERE p.paypal_sale_id = $1
+         FOR UPDATE`,
+        [request.paypalSaleId]
+      );
+      if (payment.rowCount > 0) {
+        if (!sameSubscriptionPayment({
+          paypal_subscription_id: payment.rows[0].payment_subscription_id,
+          amount: payment.rows[0].payment_amount,
+          currency: payment.rows[0].payment_currency,
+          period_start: payment.rows[0].payment_period_start,
+          period_end: payment.rows[0].payment_period_end
+        }, request)) {
+          throw conflict("subscription_payment_conflict", "saleId belongs to a different payload.");
+        }
+        await client.query("COMMIT");
+        return { alreadyProcessed: true, license: rowToLicense(payment.rows[0]) };
+      }
+      const subscription = await client.query("SELECT * FROM mt5_licenses WHERE paypal_subscription_id = $1 FOR UPDATE", [request.paypalSubscriptionId]);
+      if (subscription.rowCount > 0) {
+        throw conflict("subscription_already_activated", "subscriptionId already has a license.");
+      }
+      throw conflict("subscription_unique_conflict", "Subscription or sale already exists.");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async resolveStatusUniqueConflict(request) {
+    const client = await this.pool.connect();
+    try {
+      const event = await client.query("SELECT * FROM mt5_subscription_events WHERE event_id = $1", [request.paypalEventId]);
+      if (event.rowCount > 0) {
+        return { alreadyProcessed: true, ignored: true };
+      }
+      throw conflict("subscription_event_conflict", "Subscription event unique constraint conflict.");
     } finally {
       client.release();
     }
@@ -434,6 +512,21 @@ export class PostgresStore {
       return { status: "SUSPENDED", graceUntil: null, cancelledAt: null, suspendedAt: request.eventTime, manualReviewReason: request.reason || "SUSPENDED" };
     }
     return { status: request.status, graceUntil: null, cancelledAt: null, suspendedAt: null, manualReviewReason: null };
+  }
+
+  lifecycleEventOrdering(license, request) {
+    if (!license.latest_subscription_event_at) {
+      return { stale: false };
+    }
+    const incoming = new Date(request.eventTime).getTime();
+    const latest = new Date(license.latest_subscription_event_at).getTime();
+    if (incoming < latest) {
+      return { stale: true, reason: "older_than_latest_event" };
+    }
+    if (incoming === latest) {
+      return { stale: true, reason: "same_timestamp_tiebreak" };
+    }
+    return { stale: false };
   }
 
   subscriptionValidity(license, now) {
