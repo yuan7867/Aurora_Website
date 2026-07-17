@@ -3,7 +3,7 @@ import { useState } from "react";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 import { createPayPalSubscription } from "../services/commerceApi.js";
-import { buildPricingHref, canCreatePayPalSubscription, getCheckoutProduct, readSelection, salesEnabled } from "../utils/productSelection.js";
+import { buildPricingHref, canCreatePayPalSubscription, getCheckoutProduct, readSelection } from "../utils/productSelection.js";
 
 import "../styles/customer.css";
 
@@ -12,6 +12,7 @@ function Checkout() {
     const selection = readSelection(globalThis.location.search);
     const checkoutProductId = selection.sku;
     const product = getCheckoutProduct(checkoutProductId);
+    const productSalesEnabled = canCreatePayPalSubscription(checkoutProductId);
     const paymentFailed = params.get("payment") === "failed";
     const [customer, setCustomer] = useState({
         name: globalThis.localStorage?.getItem("auroraCustomerName") || "",
@@ -30,7 +31,7 @@ function Checkout() {
             return;
         }
 
-        if (!canCreatePayPalSubscription(checkoutProductId)) {
+        if (!productSalesEnabled) {
             setStatus("unavailable");
             setError("Temporarily unavailable.");
             return;
@@ -101,7 +102,7 @@ function Checkout() {
 
                     <article className="customer-card">
                         <span className="customer-tag">Next Steps</span>
-                        <h2>{salesEnabled ? "PayPal Subscription" : "Temporarily unavailable"}</h2>
+                        <h2>{productSalesEnabled ? "PayPal Subscription" : "Temporarily unavailable"}</h2>
                         <form className="customer-form" onSubmit={handlePayPalCheckout}>
                             <label>
                                 Customer Name
@@ -110,7 +111,7 @@ function Checkout() {
                                     value={customer.name}
                                     onChange={(event) => setCustomer((current) => ({ ...current, name: event.target.value }))}
                                     placeholder="Aurora Customer"
-                                    disabled={!product || !salesEnabled}
+                                    disabled={!product || !productSalesEnabled}
                                 />
                             </label>
                             <label>
@@ -121,11 +122,11 @@ function Checkout() {
                                     value={customer.email}
                                     onChange={(event) => setCustomer((current) => ({ ...current, email: event.target.value }))}
                                     placeholder="customer@example.com"
-                                    disabled={!product || !salesEnabled}
+                                    disabled={!product || !productSalesEnabled}
                                 />
                             </label>
-                            <button className="customer-button" type="submit" disabled={status === "loading" || !canCreatePayPalSubscription(checkoutProductId)}>
-                                {status === "loading" ? "Opening PayPal..." : salesEnabled ? "Start Subscription" : "Temporarily unavailable"}
+                            <button className="customer-button" type="submit" disabled={status === "loading" || !productSalesEnabled}>
+                                {status === "loading" ? "Opening PayPal..." : productSalesEnabled ? "Start Subscription" : "Temporarily unavailable"}
                             </button>
                             {error && <p className="product-state">{error}</p>}
                         </form>

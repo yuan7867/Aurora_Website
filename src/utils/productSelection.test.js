@@ -7,8 +7,8 @@ import {
     canCreatePayPalSubscription,
     commerceProducts,
     getCheckoutProduct,
+    getProductSalesEnabled,
     readSelection,
-    salesEnabled
 } from "./productSelection.js";
 
 test("product selection exposes only MT5 and XAU products", () => {
@@ -54,8 +54,53 @@ test("checkout product is unavailable without an exact SKU", () => {
     assert.equal(getCheckoutProduct("aurora-xau-yearly")?.productId, "aurora-xau");
 });
 
-test("sales disabled prevents frontend checkout order creation", () => {
-    assert.equal(salesEnabled, false);
+test("sales disabled by default prevents frontend checkout order creation", () => {
     assert.equal(canCreatePayPalSubscription("aurora-mt5-monthly"), false);
     assert.equal(canCreatePayPalSubscription("aurora-xau-yearly"), false);
+});
+
+test("MT5 false and XAU true only enables XAU subscriptions", () => {
+    const env = {
+        VITE_MT5_SALES_ENABLED: "false",
+        VITE_XAU_SALES_ENABLED: "true"
+    };
+
+    assert.equal(canCreatePayPalSubscription("aurora-mt5-monthly", env), false);
+    assert.equal(canCreatePayPalSubscription("aurora-mt5-yearly", env), false);
+    assert.equal(canCreatePayPalSubscription("aurora-xau-monthly", env), true);
+    assert.equal(canCreatePayPalSubscription("aurora-xau-yearly", env), true);
+});
+
+test("MT5 true and XAU false only enables MT5 subscriptions", () => {
+    const env = {
+        VITE_MT5_SALES_ENABLED: "TrUe",
+        VITE_XAU_SALES_ENABLED: "false"
+    };
+
+    assert.equal(canCreatePayPalSubscription("aurora-mt5-monthly", env), true);
+    assert.equal(canCreatePayPalSubscription("aurora-mt5-yearly", env), true);
+    assert.equal(canCreatePayPalSubscription("aurora-xau-monthly", env), false);
+    assert.equal(canCreatePayPalSubscription("aurora-xau-yearly", env), false);
+});
+
+test("both product sales flags false keeps all subscriptions unavailable", () => {
+    const env = {
+        VITE_MT5_SALES_ENABLED: "false",
+        VITE_XAU_SALES_ENABLED: "false"
+    };
+
+    assert.equal(canCreatePayPalSubscription("aurora-mt5-monthly", env), false);
+    assert.equal(canCreatePayPalSubscription("aurora-xau-monthly", env), false);
+});
+
+test("unknown SKU and invalid env values stay disabled", () => {
+    const env = {
+        VITE_MT5_SALES_ENABLED: "yes",
+        VITE_XAU_SALES_ENABLED: "1"
+    };
+
+    assert.equal(canCreatePayPalSubscription("unknown-sku", env), false);
+    assert.equal(getProductSalesEnabled("unknown-product", env), false);
+    assert.equal(canCreatePayPalSubscription("aurora-mt5-monthly", env), false);
+    assert.equal(canCreatePayPalSubscription("aurora-xau-monthly", env), false);
 });

@@ -75,7 +75,23 @@ export const checkoutProducts = {
     }
 };
 
-export const salesEnabled = false;
+function readSalesFlag(value) {
+    return String(value || "").toLowerCase() === "true";
+}
+
+export function getProductSalesEnabled(productId, env = import.meta.env || {}) {
+    const normalizedProductId = normalizeProductId(productId);
+
+    if (normalizedProductId === "aurora-mt5") {
+        return readSalesFlag(env.VITE_MT5_SALES_ENABLED);
+    }
+
+    if (normalizedProductId === "aurora-xau") {
+        return readSalesFlag(env.VITE_XAU_SALES_ENABLED);
+    }
+
+    return false;
+}
 
 export function normalizeProductId(value) {
     const normalized = String(value || "").trim().toLowerCase();
@@ -150,6 +166,7 @@ export function getCheckoutProduct(sku) {
     return checkoutProducts[sku] || null;
 }
 
-export function canCreatePayPalSubscription(sku) {
-    return Boolean(salesEnabled && getCheckoutProduct(sku));
+export function canCreatePayPalSubscription(sku, env = import.meta.env || {}) {
+    const product = getCheckoutProduct(sku);
+    return Boolean(product && getProductSalesEnabled(product.productId, env));
 }

@@ -7,6 +7,8 @@ services:
         VITE_AURORA_CLOUD_API_BASE: ${VITE_AURORA_CLOUD_API_BASE}
         VITE_APP_NAME: ${VITE_APP_NAME}
         VITE_APP_VERSION: ${VITE_APP_VERSION}
+        VITE_MT5_SALES_ENABLED: ${MT5_SALES_ENABLED}
+        VITE_XAU_SALES_ENABLED: ${XAU_SALES_ENABLED}
     container_name: aurora-website
     restart: always
     environment:
