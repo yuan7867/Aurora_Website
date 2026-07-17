@@ -10,7 +10,7 @@
     "subscription:reconcile": "node src/cli/reconcileSubscriptionDelivery.js",
     "email:retry": "node src/cli/retryLicenseEmail.js",
     "test": "node --test",
-    "check": "node --check src/server.js && node --check src/storage/migrateCommerce.js && node --check src/cli/provisionPayPalPlans.js && node --check src/cli/reconcileSubscriptionDelivery.js && node --check src/cli/retryLicenseEmail.js"
+    "check": "node --check src/server.js && node --check src/storage/migrateCommerce.js && node --check src/dispatchers/emailDispatcher.js && node --check src/services/identityService.js && node --check src/cli/provisionPayPalPlans.js && node --check src/cli/reconcileSubscriptionDelivery.js && node --check src/cli/retryLicenseEmail.js"
   },
   "dependencies": {
     "pg": "^8.13.1"

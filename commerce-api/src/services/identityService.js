@@ -7,6 +7,18 @@ import { getCustomer, saveCustomer } from "../storage/customerStore.js";
 const tokenTtlMs = 1000 * 60 * 60 * 24;
 const jwtTtlSeconds = 60 * 60 * 24 * 7;
 
+function normalizeEmail(email) {
+    return String(email || "").trim().toLowerCase();
+}
+
+function assertPassword(password) {
+    if (String(password || "").length < 8) {
+        const error = new Error("Password must be at least 8 characters.");
+        error.statusCode = 400;
+        throw error;
+    }
+}
+
 function base64url(input) {
     return Buffer.from(input).toString("base64url");
 }
@@ -40,7 +52,14 @@ function sanitizeCustomer(customer) {
         return null;
     }
 
-    const { passwordHash, activationToken, activationExpiresAt, resetToken, resetExpiresAt, ...safeCustomer } = customer;
+    const {
+        passwordHash: _passwordHash,
+        activationToken: _activationToken,
+        activationExpiresAt: _activationExpiresAt,
+        resetToken: _resetToken,
+        resetExpiresAt: _resetExpiresAt,
+        ...safeCustomer
+    } = customer;
     return safeCustomer;
 }
 
@@ -78,7 +97,15 @@ export function verifyJwt(token) {
 }
 
 export async function registerCustomer({ name, email, password }) {
-    const normalizedEmail = String(email || "").toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
+    assertPassword(password);
+
+    if (!normalizedEmail) {
+        const error = new Error("Customer email is required.");
+        error.statusCode = 400;
+        throw error;
+    }
+
     const existing = await getCustomer(normalizedEmail);
 
     if (existing?.passwordHash) {
@@ -111,7 +138,7 @@ export async function registerCustomer({ name, email, password }) {
 }
 
 export async function loginCustomer({ email, password }) {
-    const customer = await getCustomer(email);
+    const customer = await getCustomer(normalizeEmail(email));
 
     if (!customer || !verifyPassword(password, customer.passwordHash)) {
         throw new Error("Invalid email or password.");
@@ -149,7 +176,7 @@ export async function verifyCustomerEmail(token) {
 }
 
 export async function requestPasswordReset(email) {
-    const customer = await getCustomer(email);
+    const customer = await getCustomer(normalizeEmail(email));
 
     if (!customer) {
         return { status: "ok" };
@@ -172,6 +199,8 @@ export async function requestPasswordReset(email) {
 }
 
 export async function resetPassword({ token, password }) {
+    assertPassword(password);
+
     const customer = await findByToken("resetToken", token);
 
     if (!customer || new Date(customer.resetExpiresAt).getTime() < Date.now()) {
@@ -211,12 +240,15 @@ export async function createActivationForCustomer(customer) {
     }
 
     const activationToken = createToken();
+    const expiresAt = new Date(Date.now() + tokenTtlMs).toISOString();
     const saved = await saveCustomer({
         ...customer,
         status: "activation_required",
         emailVerified: false,
         activationToken,
-        activationExpiresAt: new Date(Date.now() + tokenTtlMs).toISOString()
+        activationExpiresAt: expiresAt,
+        resetToken: activationToken,
+        resetExpiresAt: expiresAt
     });
 
     await sendIdentityEmail({
