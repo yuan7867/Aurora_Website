@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" role="img" aria-labelledby="title desc">
+  <title id="title">Aurora HY</title>
+  <desc id="desc">Aurora horizon signal brand mark</desc>
+  <defs>
+    <linearGradient id="main" x1="8" y1="8" x2="62" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#dffbff"/>
+      <stop offset=".34" stop-color="#63ddff"/>
+      <stop offset=".7" stop-color="#7f74ff"/>
+      <stop offset="1" stop-color="#d7a9ff"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="36" y1="4" x2="36" y2="68" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff"/>
+      <stop offset=".62" stop-color="#7ae7ff"/>
+      <stop offset="1" stop-color="#e6bb68"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M36 7 39.5 25.5 54 18 44.5 32 63 36 44.5 40 54 54 39.5 46.5 36 65 32.5 46.5 18 54 27.5 40 9 36 27.5 32 18 18 32.5 25.5Z" stroke="url(#main)" stroke-width="2.1"/>
+    <path d="M36 5v60" stroke="url(#gold)" stroke-width="1.2"/>
+    <path d="M14 36h44" stroke="url(#main)" stroke-width=".8" opacity=".42"/>
+    <path d="M28 27c-7 3-11 9-12 19" stroke="#5de0ff" stroke-width="2" opacity=".55"/>
+    <path d="M44 27c7 3 11 9 12 19" stroke="#9a7cff" stroke-width="2" opacity=".55"/>
+  </g>
+  <circle cx="36" cy="36" r="5.1" fill="#07101f" stroke="#bdf7ff" stroke-width="1.5"/>
+  <circle cx="36" cy="36" r="1.8" fill="#fff"/>
+</svg>

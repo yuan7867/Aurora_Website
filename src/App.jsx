@@ -1,6 +1,6 @@
 import { Navigate, Routes, Route } from "react-router-dom";
 
-import Home from "./pages/Home";
+import AuroraHome from "./pages/AuroraHome";
 import AccountDashboard from "./pages/account/AccountDashboard";
 import AccountDownloads from "./pages/account/AccountDownloads";
 import AccountLicenses from "./pages/account/AccountLicenses";
@@ -29,7 +29,7 @@ function App() {
 
       <Route
         path="/"
-        element={<Home />}
+        element={<AuroraHome />}
       />
 
       <Route
