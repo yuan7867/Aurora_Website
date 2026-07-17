@@ -7,8 +7,9 @@
     "start": "node src/server.js",
     "migrate": "node src/storage/migrateCommerce.js",
     "paypal:provision": "node src/cli/provisionPayPalPlans.js",
+    "subscription:reconcile": "node src/cli/reconcileSubscriptionDelivery.js",
     "test": "node --test",
-    "check": "node --check src/server.js && node --check src/storage/migrateCommerce.js && node --check src/cli/provisionPayPalPlans.js"
+    "check": "node --check src/server.js && node --check src/storage/migrateCommerce.js && node --check src/cli/provisionPayPalPlans.js && node --check src/cli/reconcileSubscriptionDelivery.js"
   },
   "dependencies": {
     "pg": "^8.13.1"

@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 import { MAX_BODY_BYTES } from "./constants.js";
 import { ApiError, badRequest } from "./errors.js";
 import { RateLimiter } from "./rateLimit.js";
@@ -41,6 +43,37 @@ function sendJson(response, statusCode, payload) {
     "cache-control": "no-store"
   });
   response.end(JSON.stringify(payload));
+}
+
+function recoveryKey(config) {
+  return crypto
+    .createHash("sha256")
+    .update(`${config.licenseKeyPepper}:${config.internalToken}`, "utf8")
+    .digest();
+}
+
+function encryptRecoveryLicenseKey(licenseKey, config) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", recoveryKey(config), iv);
+  const encrypted = Buffer.concat([cipher.update(licenseKey, "utf8"), cipher.final()]);
+  return {
+    encryptedLicenseKey: encrypted.toString("base64"),
+    encryptionIv: iv.toString("base64"),
+    encryptionAuthTag: cipher.getAuthTag().toString("base64")
+  };
+}
+
+function decryptRecoveryLicenseKey(record, config) {
+  const decipher = crypto.createDecipheriv(
+    "aes-256-gcm",
+    recoveryKey(config),
+    Buffer.from(record.encryptionIv, "base64")
+  );
+  decipher.setAuthTag(Buffer.from(record.encryptionAuthTag, "base64"));
+  return Buffer.concat([
+    decipher.update(Buffer.from(record.encryptedLicenseKey, "base64")),
+    decipher.final()
+  ]).toString("utf8");
 }
 
 function botLicenseResponse(result) {
@@ -152,7 +185,8 @@ export function createApp({ config, store, logger }) {
     const rawLicenseKey = generateLicenseKey();
     const result = await store.activateSubscription({
       ...subscription,
-      licenseKeyHash: hmacLicenseKey(rawLicenseKey, config.licenseKeyPepper)
+      licenseKeyHash: hmacLicenseKey(rawLicenseKey, config.licenseKeyPepper),
+      recovery: encryptRecoveryLicenseKey(rawLicenseKey, config)
     });
     if (result.alreadyProcessed) {
       sendJson(response, 200, {
@@ -176,6 +210,47 @@ export function createApp({ config, store, logger }) {
       plan: result.license.plan,
       expiresAt: result.license.expiresAt ? new Date(result.license.expiresAt).toISOString() : "",
       alreadyProcessed: false
+    });
+  }
+
+  async function recoverSubscriptionLicenseKey(request, response) {
+    if (!authorizeInternal(request, response)) {
+      return;
+    }
+    const payload = await readJson(request);
+    const paypal = payload.paypal || {};
+    const recovery = await store.recoverSubscriptionLicenseKey({
+      paypalSaleId: String(paypal.saleId || ""),
+      paypalSubscriptionId: String(paypal.subscriptionId || "")
+    });
+    if (!recovery?.encryptedLicenseKey) {
+      sendJson(response, 409, {
+        status: "manual_recovery",
+        code: "license_key_not_recoverable"
+      });
+      return;
+    }
+    sendJson(response, 200, {
+      status: "recoverable",
+      licenseKey: decryptRecoveryLicenseKey(recovery, config),
+      licenseId: String(recovery.licenseId),
+      subscriptionId: recovery.paypalSubscriptionId
+    });
+  }
+
+  async function acknowledgeSubscriptionDelivery(request, response) {
+    if (!authorizeInternal(request, response)) {
+      return;
+    }
+    const payload = await readJson(request);
+    const paypal = payload.paypal || {};
+    const result = await store.acknowledgeSubscriptionDelivery({
+      paypalSaleId: String(paypal.saleId || ""),
+      paypalSubscriptionId: String(paypal.subscriptionId || "")
+    });
+    sendJson(response, 200, {
+      status: result.acknowledged ? "acknowledged" : "manual_recovery",
+      acknowledged: result.acknowledged
     });
   }
 
@@ -247,6 +322,16 @@ export function createApp({ config, store, logger }) {
 
       if (request.method === "POST" && url.pathname === "/api/v1/subscriptions/status") {
         await updateSubscriptionStatus(request, response);
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/v1/subscriptions/recover-key") {
+        await recoverSubscriptionLicenseKey(request, response);
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/v1/subscriptions/ack-delivery") {
+        await acknowledgeSubscriptionDelivery(request, response);
         return;
       }
 

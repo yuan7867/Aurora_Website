@@ -109,7 +109,7 @@ test("concurrent migrations are serialized by advisory lock", async () => {
 
   await Promise.all([first.migrate(), second.migrate()]);
 
-  assert.equal(pool.state.migrationRuns, 4);
+  assert.equal(pool.state.migrationRuns, 6);
   assert.equal(pool.state.maxActiveMigrations, 1);
   assert.equal(pool.lock.unlockCount, 2);
   assert.equal(first.migrationComplete, true);

@@ -119,7 +119,7 @@ export async function claimPayment({ product, customer, paypal }) {
             `INSERT INTO commerce_payments (
                 paypal_capture_id, paypal_order_id, paypal_event_id, sku, amount, currency,
                 payment_status, delivery_status, customer_email, customer_name
-            ) VALUES ($1,$2,$3,$4,$5,$6,$7,'claimed',$8,$9)
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
             ON CONFLICT (paypal_capture_id) DO NOTHING
             RETURNING *`,
             [
@@ -130,6 +130,7 @@ export async function claimPayment({ product, customer, paypal }) {
                 product.price,
                 product.currency,
                 paypal.status,
+                paypal.deliveryStatus || "claimed",
                 String(customer.email || "").toLowerCase(),
                 customer.name || "Aurora Customer"
             ]
@@ -367,24 +368,50 @@ export async function upsertSubscriptionFromPayPal({ product, customer, subscrip
 export async function claimSubscriptionEvent({ eventId, subscriptionId, eventType, occurredAt }) {
     await migrateCommerceStore();
 
-    const result = await getPool().query(
-        `INSERT INTO commerce_subscription_events (
-            paypal_event_id, paypal_subscription_id, event_type, occurred_at, processing_status
-        ) VALUES ($1,$2,$3,$4,'processing')
-        ON CONFLICT (paypal_event_id) DO NOTHING
-        RETURNING *`,
-        [eventId, subscriptionId || "", eventType, occurredAt || null]
-    );
+    const client = await getPool().connect();
+    try {
+        await client.query("BEGIN");
+        const insert = await client.query(
+            `INSERT INTO commerce_subscription_events (
+                paypal_event_id, paypal_subscription_id, event_type, occurred_at, processing_status
+            ) VALUES ($1,$2,$3,$4,'processing')
+            ON CONFLICT (paypal_event_id) DO NOTHING
+            RETURNING *`,
+            [eventId, subscriptionId || "", eventType, occurredAt || null]
+        );
 
-    return result.rowCount === 1;
+        if (insert.rowCount === 1) {
+            await client.query("COMMIT");
+            return true;
+        }
+
+        const retry = await client.query(
+            `UPDATE commerce_subscription_events
+             SET processing_status = 'processing',
+                 processed_at = NULL,
+                 retry_count = retry_count + 1,
+                 last_error = NULL
+             WHERE paypal_event_id = $1
+               AND processing_status = 'failed'
+             RETURNING *`,
+            [eventId]
+        );
+        await client.query("COMMIT");
+        return retry.rowCount === 1;
+    } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    } finally {
+        client.release();
+    }
 }
 
-export async function finishSubscriptionEvent({ eventId, status }) {
+export async function finishSubscriptionEvent({ eventId, status, error }) {
     await migrateCommerceStore();
 
     await getPool().query(
-        "UPDATE commerce_subscription_events SET processing_status = $2, processed_at = NOW() WHERE paypal_event_id = $1",
-        [eventId, status]
+        "UPDATE commerce_subscription_events SET processing_status = $2, processed_at = NOW(), last_error = $3 WHERE paypal_event_id = $1",
+        [eventId, status, error ? String(error.message || error).slice(0, 500) : null]
     );
 }
 
@@ -395,12 +422,24 @@ export async function recordSubscriptionPayment({ saleId, subscriptionId, eventI
         `INSERT INTO commerce_subscription_payments (
             paypal_sale_id, paypal_subscription_id, paypal_event_id, amount, currency, payment_status, paid_at
         ) VALUES ($1,$2,$3,$4,$5,$6,$7)
-        ON CONFLICT (paypal_sale_id) DO NOTHING
+        ON CONFLICT (paypal_sale_id) DO UPDATE SET
+            paypal_event_id = EXCLUDED.paypal_event_id,
+            payment_status = EXCLUDED.payment_status,
+            paid_at = COALESCE(EXCLUDED.paid_at, commerce_subscription_payments.paid_at)
         RETURNING *`,
         [saleId, subscriptionId, eventId, amount, currency, paymentStatus, paidAt || null]
     );
 
     return result.rowCount === 1;
+}
+
+export async function updatePaymentDeliveryStatus({ captureId, status }) {
+    await migrateCommerceStore();
+
+    await getPool().query(
+        "UPDATE commerce_payments SET delivery_status = $2, updated_at = NOW() WHERE paypal_capture_id = $1",
+        [captureId, status]
+    );
 }
 
 export async function hasSubscriptionPayment(saleId) {
@@ -409,6 +448,26 @@ export async function hasSubscriptionPayment(saleId) {
     const result = await getPool().query(
         "SELECT id FROM commerce_subscription_payments WHERE paypal_sale_id = $1",
         [saleId]
+    );
+    return result.rowCount > 0;
+}
+
+export async function getSubscriptionPayment(saleId) {
+    await migrateCommerceStore();
+
+    const result = await getPool().query(
+        "SELECT * FROM commerce_subscription_payments WHERE paypal_sale_id = $1",
+        [saleId]
+    );
+    return result.rows[0] || null;
+}
+
+export async function hasSubscriptionPaymentForSubscription(subscriptionId) {
+    await migrateCommerceStore();
+
+    const result = await getPool().query(
+        "SELECT id FROM commerce_subscription_payments WHERE paypal_subscription_id = $1 LIMIT 1",
+        [subscriptionId]
     );
     return result.rowCount > 0;
 }

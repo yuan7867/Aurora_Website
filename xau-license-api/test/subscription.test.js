@@ -158,6 +158,44 @@ test("monthly subscription activation issues first key once", async () => {
   }
 });
 
+test("raw subscription key is recoverable before ack and unavailable after ack", async () => {
+  const app = await start();
+  try {
+    const body = subPayload();
+    const first = await postJson(app.url, "/api/v1/subscriptions/activate", body);
+    assert.equal(first.status, 200);
+
+    const recovery = await postJson(app.url, "/api/v1/subscriptions/recover-key", {
+      paypal: {
+        saleId: body.paypal.saleId,
+        subscriptionId: body.paypal.subscriptionId
+      }
+    });
+    assert.equal(recovery.status, 200);
+    assert.equal(recovery.data.licenseKey, first.data.licenseKey);
+
+    const ack = await postJson(app.url, "/api/v1/subscriptions/ack-delivery", {
+      paypal: {
+        saleId: body.paypal.saleId,
+        subscriptionId: body.paypal.subscriptionId
+      }
+    });
+    assert.equal(ack.status, 200);
+    assert.equal(ack.data.acknowledged, true);
+
+    const afterAck = await postJson(app.url, "/api/v1/subscriptions/recover-key", {
+      paypal: {
+        saleId: body.paypal.saleId,
+        subscriptionId: body.paypal.subscriptionId
+      }
+    });
+    assert.equal(afterAck.status, 409);
+    assert.equal(afterAck.data.code, "license_key_not_recoverable");
+  } finally {
+    await app.close();
+  }
+});
+
 test("yearly subscription activation issues yearly license", async () => {
   const app = await start();
   try {

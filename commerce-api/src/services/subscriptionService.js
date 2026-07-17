@@ -1,5 +1,11 @@
 import { cancelPayPalSubscription, createPayPalSubscription, getPayPalSubscription } from "../clients/paypalClient.js";
-import { activateXauSubscription, renewXauSubscription, updateXauSubscriptionStatus } from "../clients/xauLicenseApiClient.js";
+import {
+    acknowledgeXauSubscriptionDelivery,
+    activateXauSubscription,
+    recoverXauSubscriptionLicenseKey,
+    renewXauSubscription,
+    updateXauSubscriptionStatus
+} from "../clients/xauLicenseApiClient.js";
 import { config } from "../config.js";
 import { getDownloadLink } from "../dispatchers/downloadDispatcher.js";
 import { sendLicenseEmail } from "../dispatchers/emailDispatcher.js";
@@ -12,13 +18,16 @@ import {
 import {
     finishSubscriptionEvent,
     getDeliveryForCustomer,
+    getSubscriptionPayment,
     getSubscriptionForCustomer,
     claimPayment,
     claimSubscriptionEvent,
     recordSubscriptionCreated,
-    hasSubscriptionPayment,
+    hasSubscriptionPaymentForSubscription,
+    markManualRecovery,
     recordSubscriptionPayment,
     saveDelivery,
+    updatePaymentDeliveryStatus,
     upsertSubscriptionFromPayPal
 } from "../storage/commerceStore.js";
 import { savePurchase } from "../storage/customerStore.js";
@@ -152,49 +161,49 @@ export async function getSafeSubscriptionStatus(subscriptionId) {
     };
 }
 
-async function saveInitialSubscriptionDelivery({ product, customer, paypal, license }) {
-    const licenseKey = extractLicenseKey(license);
+async function recoverLicenseKeyIfPossible({ paypal }) {
+    try {
+        const recovery = await recoverXauSubscriptionLicenseKey({ paypal });
+        return extractLicenseKey(recovery);
+    } catch {
+        return "";
+    }
+}
+
+async function saveInitialSubscriptionDelivery({ product, customer, paypal, license, paymentRecord }) {
+    let licenseKey = extractLicenseKey(license);
 
     if (!licenseKey && license?.alreadyProcessed) {
-        const delivery = await getDeliveryForCustomer({ email: customer.email, productId: product.productId });
-        return {
-            status: "already_processed",
-            delivery
-        };
+        licenseKey = await recoverLicenseKeyIfPossible({ paypal });
     }
 
     if (!licenseKey) {
-        const error = new Error("XAU subscription activation did not return a license key.");
-        error.statusCode = 502;
-        throw error;
+        await markManualRecovery(paymentRecord.payment.id, "xau_license_key_not_recoverable");
+        return {
+            status: "manual_recovery"
+        };
     }
 
     const downloadLink = getDownloadLink(product.licenseProductId);
-    const emailResult = await sendLicenseEmail({
-        customer,
-        productId: product.licenseProductId,
-        license,
-        downloadLink
-    });
-
-    const paymentRecord = await claimPayment({
-        product,
-        customer,
-        paypal: {
-            captureId: paypal.saleId,
-            orderId: paypal.subscriptionId,
-            eventId: paypal.eventId,
-            status: "COMPLETED"
-        }
-    });
-
     const delivery = await saveDelivery({
         paymentId: paymentRecord.payment.id,
         customerEmail: customer.email,
         product,
         encryptedLicense: encryptLicenseKey(licenseKey),
         downloadUrl: downloadLink,
-        emailResult: emailResult?.status ? emailResult : { status: "email_pending" }
+        emailResult: { status: "email_pending" }
+    });
+
+    await acknowledgeXauSubscriptionDelivery({ paypal });
+
+    const emailResult = await sendLicenseEmail({
+        customer,
+        productId: product.licenseProductId,
+        license: {
+            ...license,
+            licenseKey
+        },
+        downloadLink
     });
 
     const customerRecord = await savePurchase({
@@ -246,7 +255,7 @@ export async function processSubscriptionSale({ event }) {
     assertPayPalDetailsMatchProduct({ product, details, amount });
     assertXauProduct(product);
 
-    const alreadyPaid = await hasSubscriptionPayment(saleId);
+    const existingSubscriptionPayment = await getSubscriptionPayment(saleId);
     const customer = extractCustomer(details);
     const periodStart = resource.create_time || event.create_time || new Date().toISOString();
     const periodEnd = getNextBillingTime(details);
@@ -261,7 +270,7 @@ export async function processSubscriptionSale({ event }) {
         periodEnd
     });
 
-    if (alreadyPaid) {
+    if (existingSubscriptionPayment?.payment_status === "COMPLETED") {
         return {
             status: "already_processed",
             subscription
@@ -301,8 +310,45 @@ export async function processSubscriptionSale({ event }) {
         };
     }
 
+    const paymentRecord = await claimPayment({
+        product,
+        customer,
+        paypal: {
+            captureId: saleId,
+            orderId: subscriptionId,
+            eventId: event.id,
+            status: "PENDING_DELIVERY",
+            deliveryStatus: "pending_delivery"
+        }
+    });
+    await recordSubscriptionPayment({
+        saleId,
+        subscriptionId,
+        eventId: event.id,
+        amount: amount.value,
+        currency: amount.currency,
+        paymentStatus: "pending_delivery",
+        paidAt: resource.create_time || event.create_time || new Date().toISOString()
+    });
+
     const license = await activateXauSubscription({ product, customer, paypal });
-    const delivery = await saveInitialSubscriptionDelivery({ product, customer, paypal, license });
+    const delivery = await saveInitialSubscriptionDelivery({ product, customer, paypal, license, paymentRecord });
+    if (delivery.status === "manual_recovery") {
+        await recordSubscriptionPayment({
+            saleId,
+            subscriptionId,
+            eventId: event.id,
+            amount: amount.value,
+            currency: amount.currency,
+            paymentStatus: "manual_recovery",
+            paidAt: resource.create_time || event.create_time || new Date().toISOString()
+        });
+        return {
+            status: "manual_recovery",
+            subscription,
+            delivery
+        };
+    }
     await recordSubscriptionPayment({
         saleId,
         subscriptionId,
@@ -312,6 +358,7 @@ export async function processSubscriptionSale({ event }) {
         paymentStatus: resource.state || resource.status || "COMPLETED",
         paidAt: resource.create_time || event.create_time || new Date().toISOString()
     });
+    await updatePaymentDeliveryStatus({ captureId: saleId, status: "delivered" });
 
     return {
         status: "activated",
@@ -339,7 +386,10 @@ export async function processSubscriptionStatusEvent({ event, status }) {
         throw error;
     }
 
-    if (product.productFamily === "XAU") {
+    const customer = extractCustomer(details);
+    const existingPayment = await hasSubscriptionPaymentForSubscription(subscriptionId);
+
+    if (product.productFamily === "XAU" && existingPayment) {
         await updateXauSubscriptionStatus({
             product,
             paypal: {
@@ -352,7 +402,6 @@ export async function processSubscriptionStatusEvent({ event, status }) {
         });
     }
 
-    const customer = extractCustomer(details);
     return upsertSubscriptionFromPayPal({
         product,
         customer,
@@ -416,7 +465,7 @@ export async function markSubscriptionEvent({ event, handler }) {
         await finishSubscriptionEvent({ eventId: event.id, status: "processed" });
         return result;
     } catch (error) {
-        await finishSubscriptionEvent({ eventId: event.id, status: "failed" });
+        await finishSubscriptionEvent({ eventId: event.id, status: "failed", error });
         throw error;
     }
 }

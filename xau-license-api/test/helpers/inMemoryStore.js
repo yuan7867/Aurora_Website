@@ -16,6 +16,7 @@ export class InMemoryStore {
     this.licenses = [];
     this.payments = [];
     this.events = [];
+    this.pendingDeliveries = [];
     this.audit = [];
     this.nextId = 1;
   }
@@ -154,8 +155,51 @@ export class InMemoryStore {
       paypalSubscriptionId: request.paypalSubscriptionId,
       periodEnd: request.periodEnd
     });
+    this.pendingDeliveries.push({
+      licenseId: license.id,
+      paypalSaleId: request.paypalSaleId,
+      paypalSubscriptionId: request.paypalSubscriptionId,
+      encryptedLicenseKey: request.recovery?.encryptedLicenseKey || null,
+      encryptionIv: request.recovery?.encryptionIv || null,
+      encryptionAuthTag: request.recovery?.encryptionAuthTag || null,
+      acknowledged: false
+    });
     this.audit.push({ licenseId: license.id, action: "subscription_activate" });
     return { alreadyProcessed: false, license };
+  }
+
+  async recoverSubscriptionLicenseKey({ paypalSaleId, paypalSubscriptionId }) {
+    const delivery = this.pendingDeliveries.find((item) => (
+      item.paypalSaleId === paypalSaleId
+      && item.paypalSubscriptionId === paypalSubscriptionId
+    ));
+    if (!delivery || delivery.acknowledged || !delivery.encryptedLicenseKey) {
+      return null;
+    }
+    this.audit.push({ licenseId: delivery.licenseId, action: "subscription_delivery_recover" });
+    return {
+      licenseId: delivery.licenseId,
+      paypalSubscriptionId: delivery.paypalSubscriptionId,
+      encryptedLicenseKey: delivery.encryptedLicenseKey,
+      encryptionIv: delivery.encryptionIv,
+      encryptionAuthTag: delivery.encryptionAuthTag
+    };
+  }
+
+  async acknowledgeSubscriptionDelivery({ paypalSaleId, paypalSubscriptionId }) {
+    const delivery = this.pendingDeliveries.find((item) => (
+      item.paypalSaleId === paypalSaleId
+      && item.paypalSubscriptionId === paypalSubscriptionId
+    ));
+    if (!delivery) {
+      return { acknowledged: false };
+    }
+    delivery.acknowledged = true;
+    delivery.encryptedLicenseKey = null;
+    delivery.encryptionIv = null;
+    delivery.encryptionAuthTag = null;
+    this.audit.push({ licenseId: delivery.licenseId, action: "subscription_delivery_ack" });
+    return { acknowledged: true };
   }
 
   async renewSubscription(request) {

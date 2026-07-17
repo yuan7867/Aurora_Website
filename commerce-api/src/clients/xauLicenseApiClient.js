@@ -55,3 +55,21 @@ export async function updateXauSubscriptionStatus({ product, paypal }) {
         paypal
     }, config.xauLicenseApiToken);
 }
+
+export async function recoverXauSubscriptionLicenseKey({ paypal }) {
+    return postJson(subscriptionUrl("recover-key"), {
+        paypal: {
+            saleId: paypal.saleId,
+            subscriptionId: paypal.subscriptionId
+        }
+    }, config.xauLicenseApiToken);
+}
+
+export async function acknowledgeXauSubscriptionDelivery({ paypal }) {
+    return postJson(subscriptionUrl("ack-delivery"), {
+        paypal: {
+            saleId: paypal.saleId,
+            subscriptionId: paypal.subscriptionId
+        }
+    }, config.xauLicenseApiToken);
+}

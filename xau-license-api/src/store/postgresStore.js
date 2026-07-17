@@ -263,6 +263,21 @@ export class PostgresStore {
       );
       const row = insert.rows[0];
       await this.insertSubscriptionPaymentWithClient(client, row.id, request, "Completed");
+      await client.query(
+        `INSERT INTO xau_pending_license_deliveries (
+          license_id, paypal_sale_id, paypal_subscription_id,
+          encrypted_license_key, encryption_iv, encryption_auth_tag
+        ) VALUES ($1,$2,$3,$4,$5,$6)
+        ON CONFLICT (paypal_sale_id) DO NOTHING`,
+        [
+          row.id,
+          request.paypalSaleId,
+          request.paypalSubscriptionId,
+          request.recovery?.encryptedLicenseKey || null,
+          request.recovery?.encryptionIv || null,
+          request.recovery?.encryptionAuthTag || null
+        ]
+      );
       await this.auditWithClient(client, row.id, "subscription_activate", "api", {
         subscriptionId: request.paypalSubscriptionId,
         saleId: request.paypalSaleId,
@@ -275,6 +290,78 @@ export class PostgresStore {
       if (error.code === "23505") {
         throw conflict("subscription_unique_conflict", "Subscription or sale already exists.");
       }
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async recoverSubscriptionLicenseKey({ paypalSaleId, paypalSubscriptionId }) {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await client.query(
+        `SELECT d.*, l.id AS license_id
+         FROM xau_pending_license_deliveries d
+         JOIN xau_licenses l ON l.id = d.license_id
+         WHERE d.paypal_sale_id = $1
+           AND d.paypal_subscription_id = $2
+         FOR UPDATE`,
+        [paypalSaleId, paypalSubscriptionId]
+      );
+      if (result.rowCount === 0 || result.rows[0].acknowledged_at || !result.rows[0].encrypted_license_key) {
+        await client.query("COMMIT");
+        return null;
+      }
+      const row = result.rows[0];
+      await this.auditWithClient(client, row.license_id, "subscription_delivery_recover", "api", {
+        subscriptionId: paypalSubscriptionId,
+        saleId: paypalSaleId
+      });
+      await client.query("COMMIT");
+      return {
+        licenseId: row.license_id,
+        paypalSubscriptionId: row.paypal_subscription_id,
+        encryptedLicenseKey: row.encrypted_license_key,
+        encryptionIv: row.encryption_iv,
+        encryptionAuthTag: row.encryption_auth_tag
+      };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async acknowledgeSubscriptionDelivery({ paypalSaleId, paypalSubscriptionId }) {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await client.query(
+        `UPDATE xau_pending_license_deliveries
+         SET acknowledged_at = COALESCE(acknowledged_at, NOW()),
+             encrypted_license_key = NULL,
+             encryption_iv = NULL,
+             encryption_auth_tag = NULL,
+             updated_at = NOW()
+         WHERE paypal_sale_id = $1
+           AND paypal_subscription_id = $2
+         RETURNING license_id, acknowledged_at`,
+        [paypalSaleId, paypalSubscriptionId]
+      );
+      if (result.rowCount === 0) {
+        await client.query("COMMIT");
+        return { acknowledged: false };
+      }
+      await this.auditWithClient(client, result.rows[0].license_id, "subscription_delivery_ack", "api", {
+        subscriptionId: paypalSubscriptionId,
+        saleId: paypalSaleId
+      });
+      await client.query("COMMIT");
+      return { acknowledged: true };
+    } catch (error) {
+      await client.query("ROLLBACK");
       throw error;
     } finally {
       client.release();
