@@ -8,6 +8,7 @@ const defaultProduct = "mt5";
 const liveWindowSeconds = 60;
 const staleWindowSeconds = 180;
 const maxFutureSkewMs = 2 * 60 * 1000;
+const maxPastReplayMs = 5 * 60 * 1000;
 
 function readFirst(source, keys) {
     for (const key of keys) {
@@ -110,6 +111,11 @@ function validateTimestamp(value) {
         error.statusCode = 400;
         throw error;
     }
+    if (Date.now() - date.getTime() > maxPastReplayMs) {
+        const error = new Error("Live trading timestamp is too old.");
+        error.statusCode = 400;
+        throw error;
+    }
     return date.toISOString();
 }
 
@@ -203,6 +209,15 @@ export async function saveLiveTradingData(payload, productId = defaultProduct) {
     const product = normalizeProduct(productId);
     const liveTradingData = normalizeLiveTradingPayload(payload);
     liveTradingData.product = product === "xau" ? "aurora-xau" : "aurora-mt5";
+    const currentProductData = existing.products?.[product];
+
+    if (
+        currentProductData?.timestamp
+        && new Date(liveTradingData.timestamp).getTime() < new Date(currentProductData.timestamp).getTime()
+    ) {
+        return withPublicStatus(currentProductData);
+    }
+
     const nextData = {
         products: {
             ...(existing.products || {}),

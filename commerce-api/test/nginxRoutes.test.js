@@ -12,6 +12,13 @@ test("Nginx exposes only the XAU bot verification route to xau-license-api", () 
     assert.match(nginxConfig, /location \/api\/ \{[\s\S]*proxy_pass http:\/\/aurora_commerce/);
 });
 
+test("Nginx maps exact XAU live sync routes to aurora-commerce-api", () => {
+    assert.match(nginxConfig, /location = \/api\/v1\/xau\/live-snapshot \{[\s\S]*proxy_pass http:\/\/aurora_commerce\/api\/v1\/xau\/live-snapshot;/);
+    assert.match(nginxConfig, /location = \/api\/v1\/xau\/battle-test \{[\s\S]*proxy_pass http:\/\/aurora_commerce\/api\/v1\/xau\/battle-test;/);
+    assert.match(nginxConfig, /location = \/api\/v1\/live\/xau \{[\s\S]*proxy_pass http:\/\/aurora_commerce\/api\/v1\/live\/xau;/);
+    assert.doesNotMatch(nginxConfig, /location \/api\/v1\//);
+});
+
 test("Nginx exposes only the MT5 client validation route to mt5-license-api", () => {
     assert.match(nginxConfig, /upstream mt5_license_api/);
     assert.match(nginxConfig, /location = \/api\/aurora-mt5-ai-trader\/license/);

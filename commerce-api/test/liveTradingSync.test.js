@@ -121,6 +121,32 @@ test("future timestamp is rejected", async () => {
     );
 });
 
+test("old replay timestamp is rejected", async () => {
+    const old = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    await assert.rejects(
+        () => service.saveLiveTradingData(snapshot({ timestamp: old }), "xau"),
+        /too old/
+    );
+});
+
+test("out-of-order snapshot is ignored without replacing newer server data", async () => {
+    const newer = snapshot({ timestamp: new Date(Date.now() - 1000).toISOString() });
+    await service.saveLiveTradingData(newer, "xau");
+    const before = await service.getLiveTradingProductData("xau");
+    const older = snapshot({
+        timestamp: new Date(Date.now() - 2000).toISOString(),
+        account: {
+            ...snapshot().account,
+            balance: 999999
+        }
+    });
+    const ignored = await service.saveLiveTradingData(older, "xau");
+    const after = await service.getLiveTradingProductData("xau");
+
+    assert.equal(ignored.status.balance, before.status.balance);
+    assert.equal(after.status.balance, before.status.balance);
+});
+
 test("LIVE STALE OFFLINE status transitions use server time", async () => {
     await service.saveLiveTradingData(snapshot(), "xau");
     const live = await service.getLiveTradingProductData("xau");
