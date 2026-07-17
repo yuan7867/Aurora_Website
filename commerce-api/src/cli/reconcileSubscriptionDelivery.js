@@ -275,11 +275,36 @@ export async function confirmRetryableBeforeLicenseIssue({
     customerOverride = {},
     dependencies = {}
 }) {
+    if (audit.classification === "healthy_complete") {
+        const finalization = await (dependencies.finalizeRecoveredEvent || finalizeRecoveredSubscriptionEvent)({
+            eventId: audit.eventId,
+            subscriptionId: audit.subscriptionId,
+            saleId: audit.saleId,
+            classification: audit.classification
+        });
+
+        if (!finalization.finalized) {
+            return {
+                status: "rejected",
+                classification: audit.classification,
+                reason: finalization.reason || "webhook_finalization_not_allowed"
+            };
+        }
+
+        return {
+            status: finalization.alreadyProcessed ? "already_finalized" : "webhook_finalized",
+            classification: audit.classification,
+            subscriptionId: audit.subscriptionId,
+            saleId: audit.saleId,
+            eventFinalization: finalization
+        };
+    }
+
     if (audit.classification !== "retryable_before_license_issue") {
         return {
             status: "rejected",
             classification: audit.classification,
-            reason: "confirm_only_allowed_for_retryable_before_license_issue"
+            reason: "confirm_only_allowed_for_retryable_or_healthy_complete"
         };
     }
 
@@ -366,9 +391,9 @@ export async function run(argv = process.argv) {
         console.log(JSON.stringify({
             mode: "confirm",
             ...audit,
-            recovery: result
+        recovery: result
         }, null, 2));
-        return result.status === "reprocessed" ? 0 : 2;
+        return ["reprocessed", "webhook_finalized", "already_finalized"].includes(result.status) ? 0 : 2;
     }
 
     const result = await markManualRecovery({ audit, sale, subscription });

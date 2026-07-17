@@ -290,6 +290,61 @@ test("successful recovery refuses processed status when finalization checks fail
     assert.deepEqual(calls, ["process-sale", "finalize-event"]);
 });
 
+test("healthy complete confirm performs webhook-only finalization", async () => {
+    const calls = [];
+    const result = await confirmRetryableBeforeLicenseIssue({
+        audit: {
+            classification: "healthy_complete",
+            subscriptionId: "SUB-1",
+            saleId: "SALE-1",
+            eventId: "EVENT-1",
+            state: {
+                commerce: {
+                    webhookStatus: "failed"
+                }
+            }
+        },
+        sale: sale(),
+        dependencies: {
+            processSale: async () => {
+                throw new Error("should not call XAU, Resend, payment or delivery flow");
+            },
+            updateSubscriptionCustomer: async () => {
+                throw new Error("should not update customer");
+            },
+            finalizeRecoveredEvent: async ({ eventId, subscriptionId, saleId, classification }) => {
+                calls.push(["finalize-event", eventId, subscriptionId, saleId, classification]);
+                return { finalized: true, alreadyProcessed: false };
+            }
+        }
+    });
+
+    assert.equal(result.status, "webhook_finalized");
+    assert.deepEqual(calls, [
+        ["finalize-event", "EVENT-1", "SUB-1", "SALE-1", "healthy_complete"]
+    ]);
+});
+
+test("healthy complete repeated confirm is already finalized and does not run recovery", async () => {
+    const result = await confirmRetryableBeforeLicenseIssue({
+        audit: {
+            classification: "healthy_complete",
+            subscriptionId: "SUB-1",
+            saleId: "SALE-1",
+            eventId: "EVENT-1"
+        },
+        sale: sale(),
+        dependencies: {
+            processSale: async () => {
+                throw new Error("should not process");
+            },
+            finalizeRecoveredEvent: async () => ({ finalized: true, alreadyProcessed: true })
+        }
+    });
+
+    assert.equal(result.status, "already_finalized");
+});
+
 test("plain confirm rejects non-retryable state without writes", async () => {
     const result = await confirmRetryableBeforeLicenseIssue({
         audit: {
@@ -305,6 +360,9 @@ test("plain confirm rejects non-retryable state without writes", async () => {
             },
             processSale: async () => {
                 throw new Error("should not process");
+            },
+            finalizeRecoveredEvent: async () => {
+                throw new Error("should not finalize");
             }
         }
     });

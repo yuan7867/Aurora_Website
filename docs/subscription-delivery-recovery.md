@@ -54,6 +54,8 @@ npm run subscription:reconcile -- --subscription-id I-2YX738G9J4AJ --sale-id SAL
 
 This path must call XAU activate for the first completed sale because there is no completed Commerce subscription payment history. It does not construct a fake sale, does not call renew, and remains idempotent on retry.
 
+Plain `--confirm` is also allowed for `healthy_complete` when the original webhook event is still `failed`. This is a webhook-only finalization path: it does not call XAU activate or renew, does not send email, does not create or update payment, delivery, license, or subscription payment records, and only clears the failed webhook event after the finalization checks pass.
+
 After a successful `retryable_before_license_issue` reconciliation, Commerce finalizes the original webhook event in one transaction. The event is marked `processed` and `last_error` is cleared only when:
 
 - `commerce_payments.payment_status='COMPLETED'`

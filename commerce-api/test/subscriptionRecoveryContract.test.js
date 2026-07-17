@@ -120,6 +120,7 @@ test("manual recovery storage is idempotent and does not require encrypted key m
 test("recovered webhook event is finalized only after durable delivery and XAU completion", () => {
     assert.match(store, /export async function finalizeRecoveredSubscriptionEvent/);
     assert.match(store, /SELECT \* FROM commerce_subscription_events WHERE paypal_event_id = \$1 FOR UPDATE/);
+    assert.match(store, /event\.rows\[0\]\.processing_status !== "failed"/);
     assert.match(store, /p\.payment_status = 'COMPLETED'/);
     assert.match(store, /p\.delivery_status = 'delivered'/);
     assert.match(store, /d\.encrypted_license_key IS NOT NULL/);
@@ -137,13 +138,28 @@ test("recovered webhook event clears error while preserving retry count and writ
 });
 
 test("reconciliation confirm marks event processed only after recovery finalizer succeeds", () => {
-    const processIndex = cli.indexOf("dependencies.processSale || processSubscriptionSale");
-    const finalizeIndex = cli.indexOf("dependencies.finalizeRecoveredEvent || finalizeRecoveredSubscriptionEvent");
-    const rejectedIndex = cli.indexOf("reason: finalization.reason || \"recovery_not_complete\"");
-    const successIndex = cli.indexOf("eventFinalization: finalization");
+    const retryableBranch = cli.indexOf("audit.classification !== \"retryable_before_license_issue\"");
+    const processIndex = cli.indexOf("dependencies.processSale || processSubscriptionSale", retryableBranch);
+    const finalizeIndex = cli.indexOf("dependencies.finalizeRecoveredEvent || finalizeRecoveredSubscriptionEvent", processIndex);
+    const rejectedIndex = cli.indexOf("reason: finalization.reason || \"recovery_not_complete\"", finalizeIndex);
+    const successIndex = cli.indexOf("eventFinalization: finalization", rejectedIndex);
 
+    assert.ok(retryableBranch > 0);
     assert.ok(processIndex > 0);
     assert.ok(finalizeIndex > processIndex);
     assert.ok(rejectedIndex > finalizeIndex);
     assert.ok(successIndex > rejectedIndex);
+});
+
+test("healthy complete reconciliation performs webhook-only finalization", () => {
+    const branchIndex = cli.indexOf("audit.classification === \"healthy_complete\"");
+    const finalizeIndex = cli.indexOf("dependencies.finalizeRecoveredEvent || finalizeRecoveredSubscriptionEvent", branchIndex);
+    const retryableIndex = cli.indexOf("audit.classification !== \"retryable_before_license_issue\"", branchIndex);
+    const processIndex = cli.indexOf("dependencies.processSale || processSubscriptionSale", branchIndex);
+
+    assert.ok(branchIndex > 0);
+    assert.ok(finalizeIndex > branchIndex);
+    assert.ok(retryableIndex > finalizeIndex);
+    assert.ok(processIndex > retryableIndex);
+    assert.match(cli, /status: finalization\.alreadyProcessed \? "already_finalized" : "webhook_finalized"/);
 });

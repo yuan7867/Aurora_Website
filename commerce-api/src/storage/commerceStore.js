@@ -701,6 +701,14 @@ export async function finalizeRecoveredSubscriptionEvent({ eventId, subscription
             };
         }
 
+        if (event.rows[0].processing_status !== "failed") {
+            await client.query("COMMIT");
+            return {
+                finalized: false,
+                reason: "event_not_failed"
+            };
+        }
+
         const ready = await client.query(
             `SELECT p.id
              FROM commerce_payments p
