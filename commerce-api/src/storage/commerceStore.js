@@ -674,6 +674,90 @@ export async function finishSubscriptionEvent({ eventId, status, error }) {
     );
 }
 
+export async function finalizeRecoveredSubscriptionEvent({ eventId, subscriptionId, saleId, classification }) {
+    await migrateCommerceStore();
+
+    const client = await getPool().connect();
+    try {
+        await client.query("BEGIN");
+        const event = await client.query(
+            "SELECT * FROM commerce_subscription_events WHERE paypal_event_id = $1 FOR UPDATE",
+            [eventId]
+        );
+
+        if (event.rowCount === 0) {
+            await client.query("COMMIT");
+            return {
+                finalized: false,
+                reason: "event_not_found"
+            };
+        }
+
+        if (event.rows[0].processing_status === "processed") {
+            await client.query("COMMIT");
+            return {
+                finalized: true,
+                alreadyProcessed: true
+            };
+        }
+
+        const ready = await client.query(
+            `SELECT p.id
+             FROM commerce_payments p
+             JOIN commerce_deliveries d ON d.payment_id = p.id
+             JOIN xau_licenses xl ON xl.paypal_subscription_id = $2
+             JOIN xau_subscription_payments xp ON xp.paypal_sale_id = $1
+             WHERE p.paypal_capture_id = $1
+               AND p.paypal_order_id = $2
+               AND p.payment_status = 'COMPLETED'
+               AND p.delivery_status = 'delivered'
+               AND d.encrypted_license_key IS NOT NULL
+               AND NOT EXISTS (
+                   SELECT 1
+                   FROM xau_pending_license_deliveries pending
+                   WHERE pending.paypal_sale_id = $1
+                     AND pending.paypal_subscription_id = $2
+                     AND pending.acknowledged_at IS NULL
+               )
+             LIMIT 1`,
+            [saleId, subscriptionId]
+        );
+
+        if (ready.rowCount === 0) {
+            await client.query("COMMIT");
+            return {
+                finalized: false,
+                reason: "recovery_not_complete"
+            };
+        }
+
+        await client.query(
+            `UPDATE commerce_subscription_events
+             SET processing_status = 'processed',
+                 processed_at = NOW(),
+                 last_error = NULL
+             WHERE paypal_event_id = $1`,
+            [eventId]
+        );
+        await auditWithClient(client, ready.rows[0].id, "subscription_webhook_recovered", {
+            eventId,
+            subscriptionId,
+            saleId,
+            classification
+        });
+        await client.query("COMMIT");
+        return {
+            finalized: true,
+            alreadyProcessed: false
+        };
+    } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 export async function recordSubscriptionPayment({ saleId, subscriptionId, eventId, amount, currency, paymentStatus, paidAt }) {
     await migrateCommerceStore();
 

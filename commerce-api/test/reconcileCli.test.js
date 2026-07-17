@@ -247,6 +247,10 @@ test("plain confirm reprocesses only retryable first sale from verified PayPal s
             processSale: async ({ event }) => {
                 calls.push(["process-sale", event.event_type, event.resource.id, event.resource.billing_agreement_id]);
                 return { status: "activated" };
+            },
+            finalizeRecoveredEvent: async ({ eventId, subscriptionId, saleId, classification }) => {
+                calls.push(["finalize-event", eventId, subscriptionId, saleId, classification]);
+                return { finalized: true };
             }
         }
     });
@@ -254,8 +258,36 @@ test("plain confirm reprocesses only retryable first sale from verified PayPal s
     assert.equal(result.status, "reprocessed");
     assert.deepEqual(calls, [
         ["update-customer", "SUB-1", "ceo@example.com", "CEO"],
-        ["process-sale", "PAYMENT.SALE.COMPLETED", "SALE-1", "SUB-1"]
+        ["process-sale", "PAYMENT.SALE.COMPLETED", "SALE-1", "SUB-1"],
+        ["finalize-event", "EVENT-1", "SUB-1", "SALE-1", "retryable_before_license_issue"]
     ]);
+});
+
+test("successful recovery refuses processed status when finalization checks fail", async () => {
+    const calls = [];
+    const result = await confirmRetryableBeforeLicenseIssue({
+        audit: {
+            classification: "retryable_before_license_issue",
+            subscriptionId: "SUB-1",
+            saleId: "SALE-1",
+            eventId: "EVENT-1"
+        },
+        sale: sale(),
+        dependencies: {
+            processSale: async () => {
+                calls.push("process-sale");
+                return { status: "activated" };
+            },
+            finalizeRecoveredEvent: async () => {
+                calls.push("finalize-event");
+                return { finalized: false, reason: "recovery_not_complete" };
+            }
+        }
+    });
+
+    assert.equal(result.status, "rejected");
+    assert.equal(result.reason, "recovery_not_complete");
+    assert.deepEqual(calls, ["process-sale", "finalize-event"]);
 });
 
 test("plain confirm rejects non-retryable state without writes", async () => {

@@ -116,3 +116,34 @@ test("manual recovery storage is idempotent and does not require encrypted key m
     assert.match(store, /encrypted_license_key,\s*\n\s*encryption_iv,\s*encryption_auth_tag/);
     assert.match(store, /NULL,NULL,NULL/);
 });
+
+test("recovered webhook event is finalized only after durable delivery and XAU completion", () => {
+    assert.match(store, /export async function finalizeRecoveredSubscriptionEvent/);
+    assert.match(store, /SELECT \* FROM commerce_subscription_events WHERE paypal_event_id = \$1 FOR UPDATE/);
+    assert.match(store, /p\.payment_status = 'COMPLETED'/);
+    assert.match(store, /p\.delivery_status = 'delivered'/);
+    assert.match(store, /d\.encrypted_license_key IS NOT NULL/);
+    assert.match(store, /JOIN xau_licenses xl ON xl\.paypal_subscription_id = \$2/);
+    assert.match(store, /JOIN xau_subscription_payments xp ON xp\.paypal_sale_id = \$1/);
+    assert.match(store, /pending\.acknowledged_at IS NULL/);
+});
+
+test("recovered webhook event clears error while preserving retry count and writes safe audit metadata", () => {
+    assert.match(store, /SET processing_status = 'processed',\s+processed_at = NOW\(\),\s+last_error = NULL/);
+    assert.doesNotMatch(store, /retry_count\s*=\s*0/);
+    assert.match(store, /subscription_webhook_recovered/);
+    assert.match(store, /eventId,\s*\n\s*subscriptionId,\s*\n\s*saleId,\s*\n\s*classification/);
+    assert.doesNotMatch(store, /licenseKey|Authorization|raw payload|access_token/);
+});
+
+test("reconciliation confirm marks event processed only after recovery finalizer succeeds", () => {
+    const processIndex = cli.indexOf("dependencies.processSale || processSubscriptionSale");
+    const finalizeIndex = cli.indexOf("dependencies.finalizeRecoveredEvent || finalizeRecoveredSubscriptionEvent");
+    const rejectedIndex = cli.indexOf("reason: finalization.reason || \"recovery_not_complete\"");
+    const successIndex = cli.indexOf("eventFinalization: finalization");
+
+    assert.ok(processIndex > 0);
+    assert.ok(finalizeIndex > processIndex);
+    assert.ok(rejectedIndex > finalizeIndex);
+    assert.ok(successIndex > rejectedIndex);
+});

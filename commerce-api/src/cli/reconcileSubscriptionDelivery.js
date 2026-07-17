@@ -5,6 +5,7 @@ import { getDownloadLink } from "../dispatchers/downloadDispatcher.js";
 import { getProductByPayPalPlanId } from "../products.js";
 import {
     claimPayment,
+    finalizeRecoveredSubscriptionEvent,
     getSubscriptionReconciliationState,
     recordSubscriptionPayment,
     saveManualRecoveryDelivery,
@@ -292,13 +293,29 @@ export async function confirmRetryableBeforeLicenseIssue({
     const result = await (dependencies.processSale || processSubscriptionSale)({
         event: buildVerifiedSaleEvent({ audit, sale })
     });
+    const finalization = await (dependencies.finalizeRecoveredEvent || finalizeRecoveredSubscriptionEvent)({
+        eventId: audit.eventId,
+        subscriptionId: audit.subscriptionId,
+        saleId: audit.saleId,
+        classification: audit.classification
+    });
+
+    if (!finalization.finalized) {
+        return {
+            status: "rejected",
+            classification: audit.classification,
+            reason: finalization.reason || "recovery_not_complete",
+            result
+        };
+    }
 
     return {
         status: "reprocessed",
         classification: audit.classification,
         subscriptionId: audit.subscriptionId,
         saleId: audit.saleId,
-        result
+        result,
+        eventFinalization: finalization
     };
 }
 

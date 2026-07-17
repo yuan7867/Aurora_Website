@@ -54,6 +54,16 @@ npm run subscription:reconcile -- --subscription-id I-2YX738G9J4AJ --sale-id SAL
 
 This path must call XAU activate for the first completed sale because there is no completed Commerce subscription payment history. It does not construct a fake sale, does not call renew, and remains idempotent on retry.
 
+After a successful `retryable_before_license_issue` reconciliation, Commerce finalizes the original webhook event in one transaction. The event is marked `processed` and `last_error` is cleared only when:
+
+- `commerce_payments.payment_status='COMPLETED'`
+- `commerce_payments.delivery_status='delivered'`
+- `commerce_deliveries.encrypted_license_key` exists
+- XAU has the license and subscription payment
+- XAU pending delivery has been ACKed or cleared
+
+`retry_count` is not reset. The recovery writes a `subscription_webhook_recovered` audit record with only `eventId`, `subscriptionId`, `saleId`, and `classification`.
+
 Legacy manual recovery requires both `--mark-manual-recovery` and `--confirm`:
 
 ```bash
