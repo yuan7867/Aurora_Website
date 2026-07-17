@@ -51,6 +51,15 @@ test("XAU recovery and ack endpoints are internal client calls", () => {
 
 test("reconciliation CLI is dry-run unless --confirm is supplied", () => {
     assert.match(cli, /mode: "dry-run"/);
-    assert.match(cli, /hasFlag\("--confirm"\)/);
-    assert.match(cli, /processSubscriptionSale/);
+    assert.match(cli, /hasFlag\("--confirm", argv\)/);
+    assert.doesNotMatch(cli, /processSubscriptionSale/);
+    assert.match(cli, /Plain --confirm is disabled/);
+    assert.match(cli, /--mark-manual-recovery/);
+});
+
+test("manual recovery storage is idempotent and does not require encrypted key material", () => {
+    assert.match(store, /saveManualRecoveryDelivery/);
+    assert.match(store, /ON CONFLICT \(payment_id\) DO UPDATE/);
+    assert.match(store, /encrypted_license_key,\s*\n\s*encryption_iv,\s*encryption_auth_tag/);
+    assert.match(store, /NULL,NULL,NULL/);
 });

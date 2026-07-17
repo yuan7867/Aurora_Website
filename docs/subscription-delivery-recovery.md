@@ -21,18 +21,30 @@ Phase C2.5 makes PayPal subscription delivery cross-service safe.
 
 If XAU has already issued a license and Commerce did not save delivery, Commerce calls the internal recovery endpoint before ACK. If the key is no longer recoverable, Commerce marks the payment `manual_recovery` and does not show the delivery as completed.
 
-## CLI
+## Reconciliation CLI
 
-Dry-run for the known Sandbox subscription:
+Dry-run for the known Sandbox subscription performs a real read-only audit against PayPal, Commerce PostgreSQL and XAU PostgreSQL:
 
 ```bash
 npm run subscription:reconcile -- --subscription-id I-SV5VRU57MYYA --sale-id 9JB75028DP386330K --event-id manual-I-SV5VRU57MYYA
 ```
 
-Confirmed reconciliation requires explicit confirmation:
+Classifications:
+
+- `healthy_complete`: Commerce and XAU both have completed payment and encrypted delivery.
+- `recoverable_pending_key`: XAU has an ACK-pending encrypted recovery key and Commerce has not saved delivery.
+- `retryable_before_license_issue`: PayPal is completed, but XAU has not issued a license yet.
+- `legacy_key_unrecoverable`: XAU has an existing license, no ACK-pending recovery key, and Commerce has no encrypted delivery.
+- `inconsistent_manual_review`: State does not match an automated recovery path.
+- `invalid_paypal_sale`: PayPal sale is missing or not completed.
+- `subscription_mismatch`: PayPal sale, subscription, plan or SKU does not match the request.
+
+Plain `--confirm` is fail-closed. It does not fabricate a webhook and never calls XAU activate or renew.
+
+Legacy manual recovery requires both `--mark-manual-recovery` and `--confirm`:
 
 ```bash
-npm run subscription:reconcile -- --subscription-id I-SV5VRU57MYYA --sale-id 9JB75028DP386330K --event-id manual-I-SV5VRU57MYYA --confirm
+npm run subscription:reconcile -- --subscription-id I-SV5VRU57MYYA --sale-id 9JB75028DP386330K --event-id manual-I-SV5VRU57MYYA --mark-manual-recovery --confirm
 ```
 
-The CLI does not charge PayPal and does not create a second license. It reuses the normal subscription sale processing path.
+Manual recovery only creates or updates Commerce records as `manual_recovery`, creates a delivery placeholder with no encrypted license key, and outputs `customer_delivery_required=true`. It does not charge PayPal, does not create a second license, does not delete the existing XAU license, and does not accept a replacement raw key.

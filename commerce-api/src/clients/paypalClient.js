@@ -163,6 +163,23 @@ export async function getPayPalSubscription(subscriptionId) {
     return data;
 }
 
+export async function getPayPalSale(saleId) {
+    const accessToken = await getAccessToken();
+    const response = await fetch(`${getPayPalBaseUrl()}/v1/payments/sale/${encodeURIComponent(saleId)}`, {
+        headers: {
+            authorization: `Bearer ${accessToken}`,
+            accept: "application/json"
+        }
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data?.message || "PayPal sale lookup failed.");
+    }
+
+    return data;
+}
+
 export async function cancelPayPalSubscription(subscriptionId, reason = "Customer requested cancellation.") {
     const accessToken = await getAccessToken();
     const response = await fetch(`${getPayPalBaseUrl()}/v1/billing/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`, {

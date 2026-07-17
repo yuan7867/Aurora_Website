@@ -253,6 +253,48 @@ export async function markManualRecovery(paymentId, reason) {
     );
 }
 
+export async function saveManualRecoveryDelivery({ paymentId, customerEmail, product, downloadUrl, reason }) {
+    await migrateCommerceStore();
+
+    const client = await getPool().connect();
+    try {
+        await client.query("BEGIN");
+        const delivery = await client.query(
+            `INSERT INTO commerce_deliveries (
+                payment_id, customer_email, license_product_id, plan, encrypted_license_key,
+                encryption_iv, encryption_auth_tag, download_url, email_status
+            ) VALUES ($1,$2,$3,$4,NULL,NULL,NULL,$5,'manual_recovery')
+            ON CONFLICT (payment_id) DO UPDATE SET
+                email_status = 'manual_recovery',
+                updated_at = NOW()
+            RETURNING *`,
+            [
+                paymentId,
+                String(customerEmail || "").toLowerCase(),
+                product.licenseProductId,
+                product.plan,
+                downloadUrl || ""
+            ]
+        );
+        await client.query(
+            "UPDATE commerce_payments SET delivery_status = 'manual_recovery', updated_at = NOW() WHERE id = $1",
+            [paymentId]
+        );
+        await auditWithClient(client, paymentId, "manual_recovery_delivery_placeholder", {
+            reason,
+            sku: product.productId,
+            licenseProductId: product.licenseProductId
+        });
+        await client.query("COMMIT");
+        return rowToDelivery(delivery.rows[0]);
+    } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
 export async function getDeliveryForCustomer({ email, productId }) {
     await migrateCommerceStore();
 
@@ -470,4 +512,59 @@ export async function hasSubscriptionPaymentForSubscription(subscriptionId) {
         [subscriptionId]
     );
     return result.rowCount > 0;
+}
+
+export async function getSubscriptionReconciliationState({ subscriptionId, saleId, eventId }) {
+    await migrateCommerceStore();
+
+    const client = await getPool().connect();
+    try {
+        const subscription = await client.query("SELECT * FROM commerce_subscriptions WHERE paypal_subscription_id = $1", [subscriptionId]);
+        const subscriptionPayment = await client.query("SELECT * FROM commerce_subscription_payments WHERE paypal_sale_id = $1", [saleId]);
+        const payment = await client.query(
+            `SELECT p.*, d.id AS delivery_id, d.encrypted_license_key, d.email_status, d.license_product_id, d.plan
+             FROM commerce_payments p
+             LEFT JOIN commerce_deliveries d ON d.payment_id = p.id
+             WHERE p.paypal_capture_id = $1`,
+            [saleId]
+        );
+        const event = await client.query("SELECT * FROM commerce_subscription_events WHERE paypal_event_id = $1", [eventId || ""]);
+        const xauLicense = await client.query("SELECT * FROM xau_licenses WHERE paypal_subscription_id = $1", [subscriptionId]);
+        const xauPayment = await client.query("SELECT * FROM xau_subscription_payments WHERE paypal_sale_id = $1", [saleId]);
+        const xauPending = await client.query(
+            "SELECT * FROM xau_pending_license_deliveries WHERE paypal_sale_id = $1 AND paypal_subscription_id = $2",
+            [saleId, subscriptionId]
+        );
+
+        const paymentRow = payment.rows[0] || null;
+        return {
+            commerce: {
+                subscription: rowToSubscription(subscription.rows[0]),
+                subscriptionPayment: subscriptionPayment.rows[0] || null,
+                payment: rowToPayment(paymentRow),
+                delivery: paymentRow
+                    ? rowToDelivery({
+                        id: paymentRow.delivery_id,
+                        payment_id: paymentRow.id,
+                        customer_email: paymentRow.customer_email,
+                        license_product_id: paymentRow.license_product_id,
+                        plan: paymentRow.plan,
+                        encrypted_license_key: paymentRow.encrypted_license_key,
+                        encryption_iv: null,
+                        encryption_auth_tag: null,
+                        download_url: null,
+                        email_status: paymentRow.email_status
+                    })
+                    : null,
+                event: event.rows[0] || null
+            },
+            xau: {
+                license: xauLicense.rows[0] || null,
+                subscriptionPayment: xauPayment.rows[0] || null,
+                pendingDelivery: xauPending.rows[0] || null
+            }
+        };
+    } finally {
+        client.release();
+    }
 }
