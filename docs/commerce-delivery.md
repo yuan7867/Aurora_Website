@@ -40,13 +40,28 @@ activation and renewal are triggered only by verified `PAYMENT.SALE.COMPLETED`
 webhooks after Commerce verifies the PayPal subscription details, Plan ID, SKU,
 amount and currency.
 
-XAU subscription lifecycle calls stay inside the Docker network. The configured
-URL must use the internal host `xau-license-api:8000`; the client rewrites the
-path to:
+Subscription lifecycle calls stay inside the Docker network. Commerce chooses a
+product-specific adapter from the license product ID:
+
+- `AURORA-MT5-AI` -> `mt5-license-api`
+- `AURORA-XAU-AI` -> `xau-license-api`
+
+Configured URLs must use Docker internal hosts, not public Cloudflare routes:
+
+- `MT5_LICENSE_API_URL=http://mt5-license-api:8000`
+- `XAU_LICENSE_API_URL=http://xau-license-api:8000/api/v1/licenses/issue`
+
+The clients call these internal lifecycle paths:
 
 - `POST /api/v1/subscriptions/activate`
 - `POST /api/v1/subscriptions/renew`
 - `POST /api/v1/subscriptions/status`
+- `POST /api/v1/subscriptions/delivery/recover`
+- `POST /api/v1/subscriptions/delivery/ack`
+
+MT5 expects `paypal.status="COMPLETED"` for activate/renew. XAU expects
+`paypal.status="ACTIVE"` for activate/renew. The two clients keep those
+contracts isolated.
 
 ## Storage
 

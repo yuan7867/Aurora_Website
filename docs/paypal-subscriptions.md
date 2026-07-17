@@ -45,6 +45,16 @@ Provisioning safety:
 Commerce uses server-side SKU to Plan ID mapping. Browser-provided Plan IDs,
 prices, durations, or license product IDs are ignored.
 
+After `PAYMENT.SALE.COMPLETED`, Commerce dispatches by product:
+
+- MT5 subscriptions call the internal `mt5-license-api` lifecycle endpoints.
+- XAU subscriptions call the internal `xau-license-api` lifecycle endpoints.
+
+Both products reuse the same Commerce encrypted delivery, ACK, payment
+finalization, email, and recovery state machine. Public sales remain disabled
+until the corresponding `MT5_SALES_ENABLED` or `XAU_SALES_ENABLED` switch is
+explicitly set to `true`.
+
 ## Required Webhook Events
 
 Configure the Aurora Commerce webhook to receive these PayPal events:

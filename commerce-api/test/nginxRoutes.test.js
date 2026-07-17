@@ -11,3 +11,18 @@ test("Nginx exposes only the XAU bot verification route to xau-license-api", () 
     assert.doesNotMatch(nginxConfig, /location .*\/api\/v1\/licenses\/issue/);
     assert.match(nginxConfig, /location \/api\/ \{[\s\S]*proxy_pass http:\/\/aurora_commerce/);
 });
+
+test("Nginx exposes only the MT5 client validation route to mt5-license-api", () => {
+    assert.match(nginxConfig, /upstream mt5_license_api/);
+    assert.match(nginxConfig, /location = \/api\/aurora-mt5-ai-trader\/license/);
+    assert.match(nginxConfig, /proxy_pass http:\/\/mt5_license_api\/api\/aurora-mt5-ai-trader\/license/);
+    assert.match(nginxConfig, /Access-Control-Allow-Methods "POST, OPTIONS"/);
+    assert.doesNotMatch(nginxConfig, /proxy_pass http:\/\/mt5_license_api\/api\/v1\/subscriptions\/activate/);
+    assert.doesNotMatch(nginxConfig, /proxy_pass http:\/\/mt5_license_api\/api\/v1\/subscriptions\/renew/);
+    assert.doesNotMatch(nginxConfig, /proxy_pass http:\/\/mt5_license_api\/api\/v1\/subscriptions\/status/);
+    assert.doesNotMatch(nginxConfig, /proxy_pass http:\/\/mt5_license_api\/api\/v1\/subscriptions\/delivery\/recover/);
+    assert.doesNotMatch(nginxConfig, /proxy_pass http:\/\/mt5_license_api\/api\/v1\/subscriptions\/delivery\/ack/);
+    assert.doesNotMatch(nginxConfig, /proxy_pass http:\/\/mt5_license_api\/api\/v1\/licenses\/issue/);
+    assert.doesNotMatch(nginxConfig, /proxy_pass http:\/\/mt5_license_api\/health/);
+    assert.doesNotMatch(nginxConfig, /proxy_pass http:\/\/mt5_license_api\/ready/);
+});

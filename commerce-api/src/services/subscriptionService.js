@@ -1,5 +1,12 @@
 import { cancelPayPalSubscription, createPayPalSubscription, getPayPalSubscription } from "../clients/paypalClient.js";
 import {
+    acknowledgeMt5SubscriptionDelivery,
+    activateMt5Subscription,
+    recoverMt5SubscriptionDelivery,
+    renewMt5Subscription,
+    updateMt5SubscriptionStatus
+} from "../clients/mt5LicenseApiClient.js";
+import {
     acknowledgeXauSubscriptionDelivery,
     activateXauSubscription,
     recoverXauSubscriptionLicenseKey,
@@ -113,13 +120,34 @@ function assertPayPalDetailsMatchProduct({ product, details, amount }) {
     }
 }
 
-function assertXauProduct(product) {
-    if (product.productFamily !== "XAU") {
-        const error = new Error("MT5 subscription lifecycle is not available yet.");
-        error.code = "MT5_SUBSCRIPTION_NOT_AVAILABLE";
+const subscriptionAdapters = {
+    "AURORA-XAU-AI": {
+        activate: activateXauSubscription,
+        renew: renewXauSubscription,
+        status: updateXauSubscriptionStatus,
+        recover: recoverXauSubscriptionLicenseKey,
+        ack: acknowledgeXauSubscriptionDelivery
+    },
+    "AURORA-MT5-AI": {
+        activate: activateMt5Subscription,
+        renew: renewMt5Subscription,
+        status: updateMt5SubscriptionStatus,
+        recover: recoverMt5SubscriptionDelivery,
+        ack: acknowledgeMt5SubscriptionDelivery
+    }
+};
+
+function getSubscriptionAdapter(product) {
+    const adapter = subscriptionAdapters[product?.licenseProductId];
+
+    if (!adapter) {
+        const error = new Error("Subscription lifecycle is not available for this product.");
+        error.code = "SUBSCRIPTION_ADAPTER_NOT_AVAILABLE";
         error.statusCode = 503;
         throw error;
     }
+
+    return adapter;
 }
 
 function extractLicenseKey(license) {
@@ -174,24 +202,24 @@ export async function getSafeSubscriptionStatus(subscriptionId) {
     };
 }
 
-async function recoverLicenseKeyIfPossible({ paypal }) {
+async function recoverLicenseKeyIfPossible({ adapter, paypal }) {
     try {
-        const recovery = await recoverXauSubscriptionLicenseKey({ paypal });
+        const recovery = await adapter.recover({ paypal });
         return extractLicenseKey(recovery);
     } catch {
         return "";
     }
 }
 
-async function saveInitialSubscriptionDelivery({ product, customer, paypal, license, paymentRecord }) {
+async function saveInitialSubscriptionDelivery({ adapter, product, customer, paypal, license, paymentRecord }) {
     let licenseKey = extractLicenseKey(license);
 
     if (!licenseKey && license?.alreadyProcessed) {
-        licenseKey = await recoverLicenseKeyIfPossible({ paypal });
+        licenseKey = await recoverLicenseKeyIfPossible({ adapter, paypal });
     }
 
     if (!licenseKey) {
-        await markManualRecovery(paymentRecord.payment.id, "xau_license_key_not_recoverable");
+        await markManualRecovery(paymentRecord.payment.id, `${String(product.productFamily || "subscription").toLowerCase()}_license_key_not_recoverable`);
         return {
             status: "manual_recovery"
         };
@@ -207,11 +235,11 @@ async function saveInitialSubscriptionDelivery({ product, customer, paypal, lice
         emailResult: { status: "email_pending" }
     });
 
-    await acknowledgeXauSubscriptionDelivery({ paypal });
+    await adapter.ack({ paypal });
     const finalization = await finalizePaymentDelivery({ captureId: paypal.saleId });
 
     if (!finalization.finalized) {
-        const error = new Error("Commerce payment could not be finalized after XAU ACK.");
+        const error = new Error("Commerce payment could not be finalized after License API ACK.");
         error.code = "PAYMENT_FINALIZATION_FAILED";
         error.statusCode = 500;
         throw error;
@@ -266,7 +294,7 @@ export async function processSubscriptionSale({ event }) {
     }
 
     assertPayPalDetailsMatchProduct({ product, details, amount });
-    assertXauProduct(product);
+    const adapter = getSubscriptionAdapter(product);
 
     const existingSubscriptionPayment = await getSubscriptionPayment(saleId);
     const existingSubscription = await getSubscriptionByPayPalId(subscriptionId);
@@ -308,11 +336,11 @@ export async function processSubscriptionSale({ event }) {
     const existingDelivery = await getDeliveryForCustomer({ email: customer.email, productId: product.productId });
 
     if (existingSubscriptionPayment && existingDelivery?.encryptedLicenseKey) {
-        await acknowledgeXauSubscriptionDelivery({ paypal });
+        await adapter.ack({ paypal });
         const finalization = await finalizePaymentDelivery({ captureId: saleId });
 
         if (!finalization.finalized) {
-            const error = new Error("Commerce payment could not be finalized after XAU ACK.");
+            const error = new Error("Commerce payment could not be finalized after License API ACK.");
             error.code = "PAYMENT_FINALIZATION_FAILED";
             error.statusCode = 500;
             throw error;
@@ -335,7 +363,7 @@ export async function processSubscriptionSale({ event }) {
     }
 
     if (hasCompletedPaymentHistory && existingDelivery?.encryptedLicenseKey) {
-        const license = await renewXauSubscription({ product, customer, paypal });
+        const license = await adapter.renew({ product, customer, paypal });
         await recordSubscriptionPayment({
             saleId,
             subscriptionId,
@@ -373,8 +401,8 @@ export async function processSubscriptionSale({ event }) {
         paidAt: resource.create_time || event.create_time || new Date().toISOString()
     });
 
-    const license = await activateXauSubscription({ product, customer, paypal });
-    const delivery = await saveInitialSubscriptionDelivery({ product, customer, paypal, license, paymentRecord });
+    const license = await adapter.activate({ product, customer, paypal });
+    const delivery = await saveInitialSubscriptionDelivery({ adapter, product, customer, paypal, license, paymentRecord });
     if (delivery.status === "manual_recovery") {
         await recordSubscriptionPayment({
             saleId,
@@ -431,8 +459,9 @@ export async function processSubscriptionStatusEvent({ event, status }) {
     const customer = preserveStoredCustomer(existingSubscription, extractCustomer(details));
     const existingPayment = await hasSubscriptionPaymentForSubscription(subscriptionId);
 
-    if (product.productFamily === "XAU" && existingPayment) {
-        await updateXauSubscriptionStatus({
+    if (existingPayment) {
+        const adapter = getSubscriptionAdapter(product);
+        await adapter.status({
             product,
             paypal: {
                 subscriptionId,

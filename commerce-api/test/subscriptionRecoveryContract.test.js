@@ -4,13 +4,14 @@ import test from "node:test";
 
 const service = readFileSync(new URL("../src/services/subscriptionService.js", import.meta.url), "utf8");
 const store = readFileSync(new URL("../src/storage/commerceStore.js", import.meta.url), "utf8");
-const client = readFileSync(new URL("../src/clients/xauLicenseApiClient.js", import.meta.url), "utf8");
+const xauClient = readFileSync(new URL("../src/clients/xauLicenseApiClient.js", import.meta.url), "utf8");
+const mt5Client = readFileSync(new URL("../src/clients/mt5LicenseApiClient.js", import.meta.url), "utf8");
 const cli = readFileSync(new URL("../src/cli/reconcileSubscriptionDelivery.js", import.meta.url), "utf8");
 
-test("subscription sale records pending Commerce payment before XAU activation", () => {
+test("subscription sale records pending Commerce payment before License API activation", () => {
     const claimIndex = service.indexOf("const paymentRecord = await claimPayment");
     const pendingIndex = service.indexOf("paymentStatus: \"pending_delivery\"");
-    const activateIndex = service.indexOf("const license = await activateXauSubscription");
+    const activateIndex = service.indexOf("const license = await adapter.activate");
     const saveIndex = service.indexOf("const delivery = await saveInitialSubscriptionDelivery");
 
     assert.ok(claimIndex > 0);
@@ -19,9 +20,9 @@ test("subscription sale records pending Commerce payment before XAU activation",
     assert.ok(saveIndex > activateIndex);
 });
 
-test("Commerce saves encrypted delivery before acknowledging XAU raw key", () => {
+test("Commerce saves encrypted delivery before acknowledging License API raw key", () => {
     const saveIndex = service.indexOf("const delivery = await saveDelivery");
-    const ackIndex = service.indexOf("await acknowledgeXauSubscriptionDelivery");
+    const ackIndex = service.indexOf("await adapter.ack({ paypal });");
     const finalizeIndex = service.indexOf("const finalization = await finalizePaymentDelivery");
     const emailIndex = service.indexOf("const emailResult = await deliverLicenseEmail");
 
@@ -41,7 +42,7 @@ test("payment finalization requires encrypted delivery and pending payment", () 
 
 test("ACK failure cannot finalize payment before encrypted delivery is acknowledged", () => {
     const saveIndex = service.indexOf("const delivery = await saveDelivery");
-    const ackIndex = service.indexOf("await acknowledgeXauSubscriptionDelivery");
+    const ackIndex = service.indexOf("await adapter.ack({ paypal });");
     const finalizeIndex = service.indexOf("const finalization = await finalizePaymentDelivery");
 
     assert.ok(saveIndex > 0);
@@ -51,10 +52,10 @@ test("ACK failure cannot finalize payment before encrypted delivery is acknowled
 
 test("retry after ACK failure finalizes existing encrypted delivery without renewing or reactivating", () => {
     const retryBranch = service.indexOf("if (existingSubscriptionPayment && existingDelivery?.encryptedLicenseKey)");
-    const retryAck = service.indexOf("await acknowledgeXauSubscriptionDelivery({ paypal });", retryBranch);
+    const retryAck = service.indexOf("await adapter.ack({ paypal });", retryBranch);
     const retryFinalize = service.indexOf("await finalizePaymentDelivery({ captureId: saleId });", retryBranch);
     const retryReturn = service.indexOf("status: \"finalized\"", retryBranch);
-    const renewAfterBranch = service.indexOf("const license = await renewXauSubscription", retryBranch);
+    const renewAfterBranch = service.indexOf("const license = await adapter.renew", retryBranch);
 
     assert.ok(retryBranch > 0);
     assert.ok(retryAck > retryBranch);
@@ -66,8 +67,8 @@ test("retry after ACK failure finalizes existing encrypted delivery without rene
 test("first subscription sale activation is based on completed payment history not ACTIVE status", () => {
     const historyIndex = service.indexOf("hasCompletedSubscriptionPaymentForSubscription(subscriptionId)");
     const renewBranch = service.indexOf("if (hasCompletedPaymentHistory && existingDelivery?.encryptedLicenseKey)");
-    const renewIndex = service.indexOf("const license = await renewXauSubscription", renewBranch);
-    const activateIndex = service.indexOf("const license = await activateXauSubscription");
+    const renewIndex = service.indexOf("const license = await adapter.renew", renewBranch);
+    const activateIndex = service.indexOf("const license = await adapter.activate");
 
     assert.ok(historyIndex > 0);
     assert.ok(renewBranch > historyIndex);
@@ -90,16 +91,27 @@ test("failed subscription webhook events can be retried but processed events sta
 
 test("ACTIVATED status sync is deferred until a subscription payment exists", () => {
     const paymentCheck = service.indexOf("hasSubscriptionPaymentForSubscription(subscriptionId)");
-    const statusSync = service.indexOf("await updateXauSubscriptionStatus");
+    const statusSync = service.indexOf("await adapter.status");
 
     assert.ok(paymentCheck > 0);
     assert.ok(statusSync > paymentCheck);
 });
 
-test("XAU recovery and ack endpoints are internal client calls", () => {
-    assert.match(client, /recover-key/);
-    assert.match(client, /ack-delivery/);
-    assert.match(client, /config\.xauLicenseApiToken/);
+test("XAU and MT5 recovery and ack endpoints are internal client calls", () => {
+    assert.match(xauClient, /recover-key/);
+    assert.match(xauClient, /ack-delivery/);
+    assert.match(xauClient, /config\.xauLicenseApiToken/);
+    assert.match(mt5Client, /subscriptions\/delivery\/recover/);
+    assert.match(mt5Client, /subscriptions\/delivery\/ack/);
+    assert.match(mt5Client, /config\.mt5LicenseApiToken/);
+});
+
+test("subscription service uses product adapters for MT5 and XAU without XAU-only guard", () => {
+    assert.match(service, /"AURORA-XAU-AI": \{/);
+    assert.match(service, /"AURORA-MT5-AI": \{/);
+    assert.match(service, /getSubscriptionAdapter\(product\)/);
+    assert.doesNotMatch(service, /MT5_SUBSCRIPTION_NOT_AVAILABLE/);
+    assert.doesNotMatch(service, /function assertXauProduct/);
 });
 
 test("reconciliation CLI is dry-run unless --confirm is supplied", () => {

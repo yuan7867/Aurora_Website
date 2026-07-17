@@ -58,10 +58,38 @@ services:
     depends_on:
       aurora-postgres:
         condition: service_healthy
+      mt5-license-api:
+        condition: service_healthy
       xau-license-api:
         condition: service_healthy
     networks:
       - aurora-core
+
+  mt5-license-api:
+    build:
+      context: .
+      dockerfile: mt5-license-api/Dockerfile
+    container_name: mt5-license-api
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      DATABASE_URL: ${DATABASE_URL}
+      MT5_LICENSE_INTERNAL_TOKEN: ${MT5_LICENSE_API_TOKEN}
+      MT5_LICENSE_KEY_PEPPER: ${MT5_LICENSE_KEY_PEPPER}
+      MT5_LICENSE_RECOVERY_ENCRYPTION_KEY: ${MT5_LICENSE_RECOVERY_ENCRYPTION_KEY}
+    depends_on:
+      aurora-postgres:
+        condition: service_healthy
+    expose:
+      - "8000"
+    networks:
+      - aurora-core
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/ready >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   xau-license-api:
     build:
@@ -111,6 +139,7 @@ services:
     depends_on:
       - aurora-website
       - aurora-commerce-api
+      - mt5-license-api
       - xau-license-api
     ports:
       - "80:80"

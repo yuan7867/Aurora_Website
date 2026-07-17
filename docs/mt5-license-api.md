@@ -247,11 +247,39 @@ The API uses a PostgreSQL advisory migration lock. `/ready` reports not ready if
 
 ## Docker Integration Contract
 
-Phase M1 does not modify Docker. A later phase may add a service that runs `npm ci`, `npm run migrate`, and `npm start` with the required environment variables.
+Phase M2 adds the `mt5-license-api` Docker service.
+
+- Build file: `mt5-license-api/Dockerfile`
+- Runtime: Node 22 Alpine, production mode
+- Startup: `npm run migrate && exec npm start`
+- Internal port: `8000`
+- Public host port: none
+- Network: `aurora-core`
+- Database: existing `aurora-postgres`
+
+Required container environment:
+
+- `DATABASE_URL`
+- `MT5_LICENSE_INTERNAL_TOKEN`
+- `MT5_LICENSE_KEY_PEPPER`
+- `MT5_LICENSE_RECOVERY_ENCRYPTION_KEY`
+- `PORT=8000`
+
+Do not reuse XAU pepper or XAU recovery encryption material for MT5.
 
 ## Commerce Integration Contract
 
-Phase M1 does not modify Commerce. A later phase may add an MT5 subscription client that calls activate, renew, status, recovery, and ACK endpoints with the internal bearer token.
+Phase M2 wires Commerce to MT5 through `MT5_LICENSE_API_URL=http://mt5-license-api:8000` and `MT5_LICENSE_API_TOKEN`.
+
+Commerce calls:
+
+- `POST /api/v1/subscriptions/activate`
+- `POST /api/v1/subscriptions/renew`
+- `POST /api/v1/subscriptions/status`
+- `POST /api/v1/subscriptions/delivery/recover`
+- `POST /api/v1/subscriptions/delivery/ack`
+
+Only `POST /api/aurora-mt5-ai-trader/license` is public through Nginx. Internal lifecycle endpoints, `/health`, and `/ready` stay Docker-network only.
 
 ## Manual Permanent CLI
 

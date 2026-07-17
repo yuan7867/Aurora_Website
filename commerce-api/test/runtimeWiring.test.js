@@ -37,6 +37,20 @@ test("XAU License API uses internal Docker hostname in runtime examples", () => 
     assert.doesNotMatch(envExample, /https:\/\/xau-license\.aurorahy\.com/);
 });
 
+test("MT5 License API is wired as an internal Docker service", () => {
+    assert.match(compose, /mt5-license-api:/);
+    assert.match(compose, /dockerfile: mt5-license-api\/Dockerfile/);
+    assert.match(compose, /container_name: mt5-license-api/);
+    assert.match(compose, /MT5_LICENSE_INTERNAL_TOKEN: \$\{MT5_LICENSE_API_TOKEN\}/);
+    assert.match(compose, /MT5_LICENSE_KEY_PEPPER: \$\{MT5_LICENSE_KEY_PEPPER\}/);
+    assert.match(compose, /MT5_LICENSE_RECOVERY_ENCRYPTION_KEY: \$\{MT5_LICENSE_RECOVERY_ENCRYPTION_KEY\}/);
+    assert.match(compose, /MT5_LICENSE_API_URL: \$\{MT5_LICENSE_API_URL\}/);
+    assert.match(envExample, /MT5_LICENSE_API_URL=http:\/\/mt5-license-api:8000/);
+    assert.match(envExample, /MT5_LICENSE_KEY_PEPPER=CHANGE_ME_MT5_LICENSE_KEY_PEPPER/);
+    assert.match(envExample, /MT5_LICENSE_RECOVERY_ENCRYPTION_KEY=CHANGE_ME_MT5_LICENSE_RECOVERY_ENCRYPTION_KEY/);
+    assert.doesNotMatch(envExample, /https:\/\/mt5-license\.aurorahy\.com/);
+});
+
 test("sales disabled with empty Plan IDs does not make startup configuration fail", async () => {
     const previous = {
         databaseUrl: process.env.DATABASE_URL,

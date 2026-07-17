@@ -7,18 +7,18 @@ Phase C2.5 makes PayPal subscription delivery cross-service safe.
 1. `PAYMENT.SALE.COMPLETED` is claimed in `commerce_subscription_events` as `processing`.
 2. Commerce writes `commerce_payments.delivery_status='pending_delivery'`.
 3. Commerce writes `commerce_subscription_payments.payment_status='pending_delivery'`.
-4. Commerce calls XAU License API.
-5. XAU returns the raw license key once and stores an encrypted pending recovery copy.
+4. Commerce calls the product adapter for MT5 or XAU License API.
+5. The License API returns the raw license key once and stores an encrypted pending recovery copy.
 6. Commerce immediately encrypts and saves the license in `commerce_deliveries`.
-7. Commerce ACKs XAU delivery; XAU deletes the encrypted pending recovery copy.
+7. Commerce ACKs the License API delivery; the License API deletes the encrypted pending recovery copy.
 8. Commerce finalizes `commerce_payments.payment_status='COMPLETED'` and `delivery_status='delivered'`.
 9. Commerce marks the webhook event processed.
 
-Payment finalization is atomic and idempotent. It only changes `PENDING_DELIVERY` to `COMPLETED` when an encrypted Commerce delivery exists and the XAU ACK has already succeeded. `email_pending` is independent and does not block payment completion.
+Payment finalization is atomic and idempotent. It only changes `PENDING_DELIVERY` to `COMPLETED` when an encrypted Commerce delivery exists and the product License API ACK has already succeeded. `email_pending` is independent and does not block payment completion.
 
-`BILLING.SUBSCRIPTION.ACTIVATED` only updates Commerce subscription status. XAU status sync is deferred until at least one subscription payment exists.
+`BILLING.SUBSCRIPTION.ACTIVATED` only updates Commerce subscription status. Product License API status sync is deferred until at least one subscription payment exists.
 
-The first `PAYMENT.SALE.COMPLETED` for a PayPal subscription is decided from Commerce payment history, not from PayPal or Commerce subscription status. If `commerce_subscription_payments` has no `COMPLETED` payment for the `paypal_subscription_id`, Commerce calls XAU `/api/v1/subscriptions/activate`. Only later completed sales for the same subscription call `/api/v1/subscriptions/renew`.
+The first `PAYMENT.SALE.COMPLETED` for a PayPal subscription is decided from Commerce payment history, not from PayPal or Commerce subscription status. If `commerce_subscription_payments` has no `COMPLETED` payment for the `paypal_subscription_id`, Commerce calls the product adapter `/api/v1/subscriptions/activate`. Only later completed sales for the same subscription call `/api/v1/subscriptions/renew`.
 
 Checkout `customer.email` is the license delivery email. PayPal subscriber or payer email can only fill an empty Commerce customer email and must not overwrite the Checkout value.
 
@@ -26,7 +26,7 @@ Checkout `customer.email` is the license delivery email. PayPal subscriber or pa
 
 `commerce_subscription_events.processing_status='failed'` may be claimed again. `processed` events remain idempotent and are not re-executed.
 
-If XAU has already issued a license and Commerce did not save delivery, Commerce calls the internal recovery endpoint before ACK. If the key is no longer recoverable, Commerce marks the payment `manual_recovery` and does not show the delivery as completed.
+If the product License API has already issued a license and Commerce did not save delivery, Commerce calls the internal recovery endpoint before ACK. If the key is no longer recoverable, Commerce marks the payment `manual_recovery` and does not show the delivery as completed.
 
 ## Reconciliation CLI
 
