@@ -2,40 +2,40 @@ const journal = [
     {
         id: 1,
         product: "Aurora Hub",
-        version: "V0.3",
-        sprint: "Sprint 4",
-        title: "Products Section Completed",
+        version: "V2.2",
+        sprint: "Brand Positioning",
+        title: "Official Company Website",
         summary:
-            "Completed the first production-ready Products section with a scalable data-driven architecture.",
-        status: "Development",
+            "Transforming Aurora Hub into the official Aurora Technologies website for practical AI software.",
+        status: "Commercial Production",
         date: "July 2026",
-        progress: 35
+        progress: 82
     },
 
     {
         id: 2,
-        product: "Aurora MT5 AI Trader",
+        product: "Aurora Cloud",
         version: "V1.0",
-        sprint: "Battle Test",
-        title: "AI Trading Engine",
+        sprint: "Platform Foundation",
+        title: "Connected Product Infrastructure",
         summary:
-            "Adaptive AI trading engine with dynamic trailing stop and intelligent risk management.",
-        status: "Battle Test",
+            "Building cloud services that connect product data, customer access, licensing and live operational signals.",
+        status: "Production",
         date: "July 2026",
         progress: 90
     },
 
     {
         id: 3,
-        product: "Aurora Moomoo AI Trader",
-        version: "V1.0",
-        sprint: "Sprint 12",
-        title: "Wall Street Intelligence",
+        product: "Aurora Business AI",
+        version: "Planning",
+        sprint: "Future Products",
+        title: "Business Automation Direction",
         summary:
-            "Event-driven US stock analysis powered by AI and institutional market intelligence.",
-        status: "Development",
+            "Preparing practical AI tools that reduce repetitive work and help businesses make better decisions.",
+        status: "Research",
         date: "July 2026",
-        progress: 75
+        progress: 38
     },
 
     {

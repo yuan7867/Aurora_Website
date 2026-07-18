@@ -10,6 +10,7 @@ function Navbar() {
     const isProductPage = location.pathname === "/products" || location.pathname.startsWith("/product");
     const isLiveTrading = location.pathname === "/performance";
     const isPricing = location.pathname === "/pricing";
+    const isCompany = location.pathname === "/trust";
     const isAccount = location.pathname.startsWith("/account");
 
     useEffect(() => {
@@ -30,7 +31,7 @@ function Navbar() {
         { label: "Product", href: "/products", active: isProductPage },
         { label: "Pricing", href: "/pricing", active: isPricing },
         { label: "Live Trading", href: "/performance", active: isLiveTrading },
-        { label: "Support", href: "/account/support", active: false }
+        { label: "Company", href: "/trust", active: isCompany }
     ];
     const accountLinks = [
         { label: "Dashboard", href: "/account", active: location.pathname === "/account" },

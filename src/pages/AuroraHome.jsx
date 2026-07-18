@@ -3,6 +3,11 @@ import { Link } from "react-router-dom";
 
 import AuroraLogo from "../components/AuroraLogo";
 import AuroraFilm from "../components/AuroraFilm";
+import Footer from "../components/Footer";
+import Journal from "../components/Journal";
+import Products from "../components/Products";
+import Roadmap from "../components/Roadmap";
+import Vision from "../components/Vision";
 import "../styles/aurora-home.css";
 
 const navigation = [
@@ -10,14 +15,7 @@ const navigation = [
   ["Product", "/products"],
   ["Pricing", "/pricing"],
   ["Live Trading", "/performance"],
-  ["Support", "/account/support"],
-];
-
-const trustItems = [
-  ["Commercial Grade", "Systems built for disciplined deployment"],
-  ["Live Transparency", "Performance presented without invented claims"],
-  ["License Protected", "Secure subscription and account validation"],
-  ["Risk First", "Control before opportunity, always"],
+  ["Company", "/trust"],
 ];
 
 export default function AuroraHome() {
@@ -64,19 +62,20 @@ export default function AuroraHome() {
       </header>
 
       <section className="aurora-hero" aria-labelledby="aurora-title">
-        <p className="aurora-hero__eyebrow">CLARITY BEYOND THE HORIZON</p>
+        <p className="aurora-hero__eyebrow">AI SOFTWARE ECOSYSTEM</p>
 
         <h1 id="aurora-title" className="aurora-hero__title">
           <span>AURORA</span> <span>HY</span>
         </h1>
 
         <p className="aurora-hero__statement">
-          Intelligence in motion. <strong>Discipline by design.</strong>
+          Building Intelligent Software <strong>For The Real World.</strong>
         </p>
 
         <p className="aurora-hero__description">
-          Professional MT5 and XAU automation engineered for transparent execution,
-          controlled risk, and secure commercial deployment.
+          Aurora develops intelligent software that empowers traders, businesses
+          and creative professionals through practical artificial intelligence,
+          automation and cloud technologies.
         </p>
 
         <div className="aurora-hero__actions">
@@ -88,17 +87,14 @@ export default function AuroraHome() {
         </div>
       </section>
 
-      <section className="aurora-trust" aria-label="Aurora HY principles">
-        {trustItems.map(([title, description], index) => (
-          <article className="aurora-trust__item" key={title} style={{ "--delay": `${index * 90}ms` }}>
-            <span className="aurora-trust__number">0{index + 1}</span>
-            <div>
-              <h2>{title}</h2>
-              <p>{description}</p>
-            </div>
-          </article>
-        ))}
-      </section>
+      <div className="aurora-home__sections">
+        <Products />
+        <Journal />
+        <Roadmap />
+        <Vision />
+      </div>
+
+      <Footer />
     </main>
   );
 }

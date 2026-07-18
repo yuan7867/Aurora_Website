@@ -7,7 +7,8 @@ const vision = {
     values: [
         "Innovation",
         "Reliability",
-        "Simplicity",
+        "Practical AI",
+        "Transparency",
         "Long-Term Thinking"
     ]
 }

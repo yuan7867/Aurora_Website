@@ -234,6 +234,55 @@
     margin-top: 4px;
 }
 
+.company-section-grid {
+    align-items: stretch;
+}
+
+.company-story {
+    grid-row: span 2;
+}
+
+.company-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.company-values strong {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    padding: 0 14px;
+    color: #fff;
+    border: 1px solid rgba(79, 209, 255, .18);
+    border-radius: 999px;
+    background: rgba(79, 209, 255, .06);
+}
+
+.company-contact-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.company-contact-grid div {
+    display: grid;
+    gap: 8px;
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .035);
+}
+
+.company-contact-grid span {
+    color: var(--aurora-text-muted);
+    font-size: 12px;
+    font-weight: 850;
+    letter-spacing: .9px;
+    text-transform: uppercase;
+}
+
 .journey-list {
     display: grid;
     gap: 14px;

@@ -25,7 +25,7 @@ body {
   position: relative;
   isolation: isolate;
   min-height: 100svh;
-  overflow: hidden;
+  overflow-x: hidden;
   background: var(--aurora-night);
 }
 
@@ -287,6 +287,14 @@ body {
   animation-delay: 330ms;
 }
 .aurora-hero__actions { display: flex; gap: 16px; margin-top: 34px; animation-delay: 410ms; }
+
+.aurora-home__sections {
+  position: relative;
+  z-index: 5;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(88, 220, 255, 0.09), transparent 30%),
+    linear-gradient(180deg, rgba(2, 7, 20, 0.76), #020714 16%, #020714 100%);
+}
 
 .aurora-trust {
   position: relative;

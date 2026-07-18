@@ -12,7 +12,7 @@ function Footer() {
                 <a href="/products">Products</a>
                 <a href="/pricing">Pricing</a>
                 <a href="/performance">Live Trading</a>
-                <a href="/trust">Trust Center</a>
+                <a href="/trust">Company</a>
                 <a href="/checkout?product=aurora-mt5-ai">Buy Now</a>
             </div>
 

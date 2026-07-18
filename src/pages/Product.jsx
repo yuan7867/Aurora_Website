@@ -11,25 +11,9 @@ import ProductLayout from "../components/layouts/ProductLayout";
 import ProductReleaseNotes from "../components/ProductReleaseNotes";
 
 import { getProduct } from "../services/auroraApi.js";
+import { applySeo, canonicalUrl, defaultSeo } from "../utils/seo";
 
 import "../styles/product.css";
-
-const defaultSeo = {
-    title: "Aurora | Intelligent AI Software Company",
-    description: "Aurora builds intelligent AI software for traders, businesses and creative professionals."
-};
-
-function updateMeta(name, content, attribute = "name") {
-    let element = document.head.querySelector(`meta[${attribute}="${name}"]`);
-
-    if (!element) {
-        element = document.createElement("meta");
-        element.setAttribute(attribute, name);
-        document.head.appendChild(element);
-    }
-
-    element.setAttribute("content", content);
-}
 
 function Product() {
     const { id } = useParams();
@@ -134,28 +118,27 @@ function Product() {
 
     useEffect(() => {
         if (!product) {
-            document.title = status === "loading" ? "Loading Product | Aurora" : "Product Not Found | Aurora";
-            updateMeta("description", "Aurora product information is provided by Aurora Cloud.");
-            updateMeta("og:title", document.title, "property");
-            updateMeta("og:description", "Aurora product information is provided by Aurora Cloud.", "property");
+            applySeo({
+                title: status === "loading" ? "Loading Product | Aurora HY" : "Product Not Found | Aurora HY",
+                description: "Aurora product information is provided by Aurora Cloud.",
+                canonical: canonicalUrl(`/product/${id || ""}`)
+            });
             return;
         }
 
-        const title = `${product.title} | Aurora`;
+        const title = `${product.title} | Aurora HY`;
         const description = product.description;
 
-        document.title = title;
-        updateMeta("description", description);
-        updateMeta("og:title", title, "property");
-        updateMeta("og:description", description, "property");
+        applySeo({
+            title,
+            description,
+            canonical: canonicalUrl(`/product/${id}`)
+        });
 
         return () => {
-            document.title = defaultSeo.title;
-            updateMeta("description", defaultSeo.description);
-            updateMeta("og:title", defaultSeo.title, "property");
-            updateMeta("og:description", "Building AI That Works.", "property");
+            applySeo(defaultSeo);
         };
-    }, [product, status]);
+    }, [id, product, status]);
 
     if (status === "loading") {
         return (

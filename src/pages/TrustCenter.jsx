@@ -1,223 +1,101 @@
-import { useEffect, useState } from "react";
-
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
-import { getHeartbeat, getPerformance, getReleases, getStatus } from "../services/auroraApi.js";
 
 import "../styles/customer.css";
 
-function readValue(source, keys) {
-    for (const key of keys) {
-        const value = key.split(".").reduce((current, path) => current?.[path], source);
-
-        if (value !== undefined && value !== null && value !== "") {
-            return value;
-        }
-    }
-
-    return null;
-}
-
-function formatValue(value) {
-    if (value === null) {
-        return "Loading...";
-    }
-
-    return String(value);
-}
-
-function formatMoney(value) {
-    if (value === null) {
-        return "Loading...";
-    }
-
-    const number = Number(value);
-
-    if (Number.isNaN(number)) {
-        return String(value);
-    }
-
-    return number.toFixed(2);
-}
-
-function formatPercent(value) {
-    if (value === null) {
-        return "Loading...";
-    }
-
-    const number = Number(value);
-
-    if (Number.isNaN(number)) {
-        return String(value);
-    }
-
-    return `${number.toFixed(2)}%`;
-}
-
-function isLive(value) {
-    return value === true || ["true", "running", "connected", "ok", "live"].includes(String(value).toLowerCase());
-}
-
-function statusTone(value) {
-    const normalizedValue = String(value || "unknown").toLowerCase();
-
-    if (["running", "live", "ok"].includes(normalizedValue)) {
-        return "running";
-    }
-
-    if (["connected", "true"].includes(normalizedValue)) {
-        return "connected";
-    }
-
-    if (["syncing", "loading"].includes(normalizedValue)) {
-        return "syncing";
-    }
-
-    if (["offline", "false", "disconnected", "stopped"].includes(normalizedValue)) {
-        return "offline";
-    }
-
-    return "unknown";
-}
-
-function StatusPill({ value, tone }) {
-    return <span className={`status-pill ${tone || statusTone(value)}`}>{formatValue(value)}</span>;
-}
-
-function TrustRow({ label, children }) {
-    return (
-        <div className="trust-row">
-            <span>{label}</span>
-            <strong>{children}</strong>
-        </div>
-    );
-}
+const values = [
+    "Innovation",
+    "Reliability",
+    "Practical AI",
+    "Transparency",
+    "Long-Term Thinking"
+];
 
 function TrustCenter() {
-    const [trust, setTrust] = useState(null);
-    const [pageStatus, setPageStatus] = useState("loading");
-
-    useEffect(() => {
-        let mounted = true;
-
-        Promise.allSettled([getHeartbeat(), getStatus(), getPerformance(), getReleases()])
-            .then(([heartbeatResult, statusResult, performanceResult, releasesResult]) => {
-                if (!mounted) {
-                    return;
-                }
-
-                if (
-                    heartbeatResult.status !== "fulfilled"
-                    || statusResult.status !== "fulfilled"
-                    || performanceResult.status !== "fulfilled"
-                ) {
-                    setTrust(null);
-                    setPageStatus("offline");
-                    return;
-                }
-
-                setTrust({
-                    heartbeat: heartbeatResult.value,
-                    status: statusResult.value,
-                    performance: performanceResult.value,
-                    releases: releasesResult.status === "fulfilled" ? releasesResult.value : []
-                });
-                setPageStatus("ready");
-            });
-
-        return () => {
-            mounted = false;
-        };
-    }, []);
-
-    const heartbeat = trust?.heartbeat || {};
-    const cloudStatus = trust?.status || {};
-    const performance = trust?.performance || {};
-    const release = Array.isArray(trust?.releases) ? trust.releases[0] : null;
-    const running = readValue(heartbeat, ["running", "status", "health"]);
-    const connected = readValue(cloudStatus, ["connected"]);
-
     return (
         <>
             <Navbar />
 
-            <main className="customer-page">
+            <main className="customer-page company-page">
                 <section className="customer-hero">
-                    <span className="customer-tag">Trust Center</span>
-                    <h1>Aurora live trading proof, directly from Aurora Cloud.</h1>
+                    <span className="customer-tag">Company</span>
+                    <h1>Aurora Technologies builds practical AI software for the real world.</h1>
                     <p>
-                        This page is built for buyer confidence. Current Aurora MT5 and Cloud signals come from live API
-                        calls; if Aurora Cloud is offline, no fallback or mock data is displayed.
+                        Aurora HY is the official website of Aurora Technologies, an AI software company focused on
+                        intelligent products, automation and cloud-connected platforms.
                     </p>
-                    <div className="customer-actions">
-                        <a className="customer-button" href="/pricing">Compare Plans</a>
-                    </div>
                 </section>
 
-                {pageStatus === "loading" && <p className="product-state">Loading...</p>}
-
-                {pageStatus === "offline" && (
-                    <p className="product-state">Cloud Offline. Waiting for Aurora Cloud...</p>
-                )}
-
-                {trust && (
-                    <>
-                    <section className="customer-note" aria-label="Trust assurance">
-                        <h2>What is verified here</h2>
+                <section className="customer-grid two company-section-grid" aria-label="Aurora company profile">
+                    <article className="customer-card company-story">
+                        <span>Our Story</span>
+                        <h2>Why Aurora was founded.</h2>
                         <p>
-                            Broker, server, account status, AI status, Battle Test and Cloud connection are displayed
-                            from Aurora Cloud API responses. The website does not invent live trading data.
+                            Aurora was founded to build software that is useful in real working environments, not only
+                            impressive in presentations. Practical AI matters because people need tools that improve
+                            decisions, reduce repetitive work and keep complex operations understandable.
                         </p>
-                    </section>
+                        <p>
+                            Aurora builds software instead of hype. Every product is designed around reliability,
+                            commercial readiness and long-term value.
+                        </p>
+                    </article>
 
-                    <section className="customer-grid two">
-                        <article className="customer-card">
-                            <h2>Live Trading</h2>
-                            <TrustRow label="Broker">{formatValue(readValue(heartbeat, ["broker"]))}</TrustRow>
-                            <TrustRow label="Server">{formatValue(readValue(heartbeat, ["server"]))}</TrustRow>
-                            <TrustRow label="Session">{formatValue(readValue(heartbeat, ["session"]))}</TrustRow>
-                            <TrustRow label="Balance">{formatMoney(readValue(cloudStatus, ["balance"]))}</TrustRow>
-                            <TrustRow label="Equity">{formatMoney(readValue(cloudStatus, ["equity"]))}</TrustRow>
-                            <TrustRow label="Open Positions">{formatValue(readValue(cloudStatus, ["open_positions"]))}</TrustRow>
-                        </article>
+                    <article className="customer-card">
+                        <span>Mission</span>
+                        <h2>Better decisions, less repetitive work.</h2>
+                        <p>
+                            Aurora builds intelligent software that helps people make better decisions, save time,
+                            reduce repetitive work and solve real-world problems.
+                        </p>
+                    </article>
 
-                        <article className="customer-card">
-                            <h2>Battle Test</h2>
-                            <TrustRow label="Battle Status"><StatusPill value={readValue(heartbeat, ["battle_test"])} /></TrustRow>
-                            <TrustRow label="Runtime"><StatusPill value={running} /></TrustRow>
-                            <TrustRow label="System Health"><StatusPill value={readValue(heartbeat, ["health"])} /></TrustRow>
-                            <TrustRow label="Last Heartbeat">{formatValue(readValue(heartbeat, ["timestamp"]))}</TrustRow>
-                        </article>
+                    <article className="customer-card">
+                        <span>Vision</span>
+                        <h2>One connected AI ecosystem.</h2>
+                        <p>
+                            Aurora is building one connected AI ecosystem serving traders, businesses, creative
+                            professionals and future enterprise platforms.
+                        </p>
+                    </article>
 
-                        <article className="customer-card">
-                            <h2>System Health</h2>
-                            <TrustRow label="AI Status"><StatusPill value={readValue(cloudStatus, ["ai_status"])} /></TrustRow>
-                            <TrustRow label="Cloud Status">
-                                <StatusPill value={isLive(connected) ? "Connected" : "Offline"} tone={isLive(connected) ? "connected" : "offline"} />
-                            </TrustRow>
-                            <TrustRow label="Today P/L">
-                                <StatusPill
-                                    value={formatMoney(readValue(performance, ["net_profit", "profit"]))}
-                                    tone={Number(readValue(performance, ["net_profit", "profit"])) < 0 ? "loss" : "profit"}
-                                />
-                            </TrustRow>
-                            <TrustRow label="Win Rate">{formatPercent(readValue(performance, ["win_rate"]))}</TrustRow>
-                        </article>
+                    <article className="customer-card">
+                        <span>Core Values</span>
+                        <h2>How Aurora builds.</h2>
+                        <div className="company-values">
+                            {values.map((value) => (
+                                <strong key={value}>{value}</strong>
+                            ))}
+                        </div>
+                    </article>
+                </section>
 
-                        <article className="customer-card">
-                            <h2>Release Notes</h2>
-                            <TrustRow label="Release">
-                                {release?.version || release?.release_version || readValue(heartbeat, ["product_id"]) || "Cloud release pending"}
-                            </TrustRow>
-                            <TrustRow label="Summary">
-                                {release?.summary || "Release data will appear from Aurora Cloud release service when available."}
-                            </TrustRow>
-                            <TrustRow label="Cloud API">Live</TrustRow>
-                            <TrustRow label="Data Source">Aurora Cloud API</TrustRow>
-                        </article>
-                    </section>
-                    </>
-                )}
+                <section className="customer-note company-contact" aria-label="Aurora contact information">
+                    <span className="customer-tag">Contact</span>
+                    <h2>Professional contact channels.</h2>
+                    <div className="company-contact-grid">
+                        <div>
+                            <span>Business Email</span>
+                            <strong>support@aurorahy.com</strong>
+                        </div>
+                        <div>
+                            <span>WhatsApp</span>
+                            <strong>Available by request</strong>
+                        </div>
+                        <div>
+                            <span>Business Hours</span>
+                            <strong>Monday to Friday, 9:00 AM - 6:00 PM</strong>
+                        </div>
+                        <div>
+                            <span>Google Meet</span>
+                            <strong>By appointment</strong>
+                        </div>
+                        <div>
+                            <span>Future Office</span>
+                            <strong>Aurora Technologies office location to be announced</strong>
+                        </div>
+                    </div>
+                </section>
             </main>
 
             <Footer />
