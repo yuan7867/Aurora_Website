@@ -53,10 +53,10 @@ const icons = {
 const products = [
     {
         title: "Aurora MT5 AI Trader",
-        strategy: "Conservative Strategy",
-        badge: "MT5 Strategy",
+        strategy: "Professional AI Gold Trading Platform",
+        badge: "LIVE NOW",
         theme: "blue",
-        subtitle: "Built for long-term disciplined traders.",
+        subtitle: "Precision automation for professionals who value risk control, reliability and disciplined execution.",
         productId: "mt5",
         checkout: "/pricing?product=aurora-mt5",
         price: "USD 19.90",
@@ -64,27 +64,27 @@ const products = [
         features: [
             {
                 icon: "shield",
-                title: "Capital Protection",
-                description: "Designed to prioritize disciplined risk control."
+                title: "Risk Control",
+                description: "Built to support measured decisions and controlled exposure."
             },
             {
                 icon: "brain",
-                title: "Adaptive AI",
-                description: "Adjusts decision logic to changing conditions."
+                title: "AI Automation",
+                description: "Applies intelligent automation to reduce manual workload."
             },
             {
                 icon: "chart",
-                title: "Stable Performance",
-                description: "Built for consistent long-term execution."
+                title: "Reliable Execution",
+                description: "Designed for consistent commercial operation over time."
             }
         ]
     },
     {
         title: "Aurora XAU Trader",
-        strategy: "Aggressive Strategy",
-        badge: "XAU Strategy",
+        strategy: "Advanced AI Gold Momentum Platform",
+        badge: "LIVE NOW",
         theme: "gold",
-        subtitle: "Built for traders seeking maximum opportunity.",
+        subtitle: "High-speed automation for professionals focused on momentum, opportunity and execution quality.",
         productId: "xau",
         checkout: "/pricing?product=aurora-xau",
         price: "USD 19.90",
@@ -92,45 +92,45 @@ const products = [
         features: [
             {
                 icon: "zap",
-                title: "High Growth",
-                description: "Targets high-opportunity market conditions."
+                title: "Momentum Focus",
+                description: "Designed for active markets where speed and timing matter."
             },
             {
                 icon: "grid",
-                title: "Advanced Grid Engine",
-                description: "Structured for active XAU execution logic."
+                title: "Execution Engine",
+                description: "Supports structured automation for fast-moving conditions."
             },
             {
                 icon: "rocket",
-                title: "Maximum Opportunity",
-                description: "Built for traders who accept higher intensity."
+                title: "Opportunity Capture",
+                description: "Built for professionals seeking responsive market participation."
             }
         ]
     },
     {
         title: "Aurora Luno",
-        strategy: "Coming Soon",
-        badge: "Future Product",
+        strategy: "Currently Under Development",
+        badge: "COMING NEXT",
         theme: "purple",
-        subtitle: "A future Aurora product currently in preparation.",
-        price: "Coming Soon",
+        subtitle: "AI-powered cryptocurrency intelligence platform designed for the next generation of digital asset trading.",
+        price: "In Development",
         billing: "Not available for purchase",
         comingSoon: true,
         features: [
             {
                 icon: "orbit",
-                title: "In Development",
-                description: "Product scope will be announced when ready."
+                title: "Digital Asset Intelligence",
+                description: "Designed for traders who need clearer cryptocurrency market context."
             },
             {
                 icon: "shield",
-                title: "Aurora Standard",
-                description: "Built under the Aurora commercial framework."
+                title: "Commercial Foundation",
+                description: "Planned under the same Aurora platform standards."
             },
             {
                 icon: "brain",
-                title: "Cloud Ready",
-                description: "Planned for future Aurora Cloud integration."
+                title: "AI Research Layer",
+                description: "Prepared for future Aurora intelligence and cloud integration."
             }
         ]
     }
@@ -140,7 +140,7 @@ function Products() {
     const [compareOpen, setCompareOpen] = useState(false);
 
     return (
-        <section className="products" id="products" aria-label="Aurora HY trading products">
+        <section className="products" id="products" aria-label="Aurora HY products">
             <div className="product-grid">
                 {products.map((product) => (
                     <article className={`product-card product-card-${product.theme}`} key={product.title}>
@@ -162,7 +162,7 @@ function Products() {
                         </div>
 
                         <div className="product-live-slot" aria-label={`${product.title} commercial access`}>
-                            <span>{product.comingSoon ? "Coming soon. No checkout available." : "Commercial access through Aurora checkout"}</span>
+                            <span>{product.comingSoon ? "In development. Commercial access is not open yet." : "Commercial access through Aurora checkout"}</span>
                         </div>
 
                         <div className="product-features">
@@ -179,10 +179,10 @@ function Products() {
 
                         <div className="product-actions">
                             {product.comingSoon ? (
-                                <span className="product-buy product-disabled" aria-disabled="true">Coming Soon</span>
+                                <span className="product-buy product-disabled" aria-disabled="true">In Development</span>
                             ) : (
                                 <>
-                                    <a href={product.checkout} className="product-buy">Choose Plan</a>
+                                    <a href={product.checkout} className="product-buy">View Access</a>
                                     <button
                                         type="button"
                                         className="product-learn"
@@ -208,13 +208,13 @@ function Products() {
                 <div className="product-compare" aria-label="Aurora product comparison">
                     <div>
                         <span>Best For</span>
-                        <strong>MT5: disciplined traders</strong>
-                        <strong>XAU: opportunity seekers</strong>
+                        <strong>MT5: risk-focused professionals</strong>
+                        <strong>XAU: momentum-focused professionals</strong>
                     </div>
                     <div>
-                        <span>Risk Profile</span>
-                        <strong>MT5: conservative</strong>
-                        <strong>XAU: aggressive</strong>
+                        <span>Platform Focus</span>
+                        <strong>MT5: precision and reliability</strong>
+                        <strong>XAU: speed and opportunity</strong>
                     </div>
                     <div>
                         <span>License</span>

@@ -12,10 +12,14 @@ function ProductsPage() {
             <main className="customer-page products-page">
                 <section className="customer-hero">
                     <span className="customer-tag">Products</span>
-                    <h1>Choose your Aurora trading system.</h1>
+                    <h1>Discover the Aurora Ecosystem.</h1>
                     <p>
-                        Select one commercial trading product. MT5 and XAU are available separately, while future
-                        products will appear here only when they are ready.
+                        Explore Aurora's growing ecosystem of intelligent software built for traders, businesses and
+                        creative professionals.
+                    </p>
+                    <p>
+                        Each Aurora product is purpose-built to solve real-world problems while sharing the same Aurora
+                        intelligence platform.
                     </p>
                 </section>
 
