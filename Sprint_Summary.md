@@ -1,31 +1,15 @@
-# Aurora Hub Sprint V2.7 Summary
+# Aurora Hub Hotfix Summary
 
 ## Files Modified
 
 - `src/pages/TrustCenter.jsx`
-- `src/App.jsx`
-- `src/utils/seo.js`
 - `Sprint_Summary.md`
 
-## Company Copy Improvements
+## Company Copy Correction
 
-- Rewrote the Company hero around Aurora's long-term software mission.
-- Added the meaning of Aurora as light, clarity and new beginnings.
-- Added the meaning of HY as the founder identity behind Aurora.
-- Expanded the company story from real problems rather than technology trends.
-- Rewrote Mission and Vision with practical AI, human judgment and Aurora Cloud ecosystem language.
-- Added `What Aurora Is Building` with live, development and future product positioning.
-- Expanded Core Values with commercial, trust-focused descriptions.
-- Added Why Trust Aurora and The Future of Aurora sections.
-- Updated contact copy for email, WhatsApp, business hours, Google Meet and company location.
-- Added the final Aurora HY brand line.
-
-## SEO Changes
-
-- Updated Company page title to `About Aurora HY | Practical AI Software Company`.
-- Updated Company page description for Aurora's story, mission and future.
-- Added support for page-specific Open Graph title and description.
-- Set Company Open Graph title and description to the required V2.7 copy.
+- Updated only the `The Meaning of HY` section on the Company page.
+- Removed all personal name and founder references from the HY explanation.
+- Repositioned HY as Aurora's foundation of disciplined engineering, responsible innovation, accountability and long-term value.
 
 ## Build Result
 
@@ -34,10 +18,10 @@
 
 ## ADS PASS
 
-- No UI redesign.
+- No UI changes.
 - No CSS changes.
-- No layout classes changed.
+- No layout changes.
+- No spacing changes.
+- No card changes.
 - No Router changes.
-- No business logic changes.
-- No Cloud/API changes.
-- No PayPal, Commerce, License, MT5 or XAU trading changes.
+- No SEO changes.

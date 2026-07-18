@@ -72,20 +72,20 @@ function TrustCenter() {
 
                     <article className="customer-card">
                         <span>The Meaning of HY</span>
-                        <h2>Built from the founder's identity. Designed to grow beyond it.</h2>
+                        <h2>Built on strong foundations. Designed for lasting impact.</h2>
                         <p>
-                            HY represents Hong Yuen, the founder behind Aurora. It gives the company a personal
-                            foundation and reminds Aurora that every product begins with responsibility, conviction and
-                            real-world experience.
+                            HY represents the foundation of Aurora's identity.
                         </p>
                         <p>
-                            As Aurora grows, HY will continue to represent the human origin behind the technology: the
-                            belief that intelligent software should remain practical, understandable and accountable to
-                            the people who use it.
+                            It reflects the company's commitment to disciplined engineering, responsible innovation and
+                            long-term thinking.
                         </p>
                         <p>
-                            Aurora HY brings together two ideas: Aurora, the light of possibility, and HY, the human
-                            vision that gives it direction.
+                            While Aurora represents new possibilities through intelligent software, HY reminds us that
+                            every product must be built with integrity, accountability and lasting value.
+                        </p>
+                        <p>
+                            Together they represent a balance between innovation and responsibility.
                         </p>
                     </article>
 
