@@ -24,8 +24,9 @@ body {
 .aurora-home {
   position: relative;
   isolation: isolate;
-  min-height: 100svh;
-  overflow-x: hidden;
+  height: 100svh;
+  min-height: 720px;
+  overflow: hidden;
   background: var(--aurora-night);
 }
 
@@ -33,7 +34,7 @@ body {
 
 .aurora-film {
   position: absolute;
-  z-index: -1;
+  z-index: 0;
   inset: 84px 0 0;
   overflow: hidden;
   pointer-events: none;
@@ -51,17 +52,17 @@ body {
 
 .aurora-film__picture img {
   object-fit: cover;
-  object-position: 50% 58%;
+  object-position: 50% 60%;
   transform: scale(1.045);
   transform-origin: 50% 100%;
-  filter: brightness(0.58) saturate(1.1);
+  filter: brightness(0.7) saturate(1.18);
 }
 
 .aurora-film__shade {
   z-index: 3;
   background:
-    radial-gradient(ellipse at 50% 42%, transparent 0 31%, rgba(2, 7, 20, 0.08) 55%, rgba(2, 7, 20, 0.24) 100%),
-    linear-gradient(180deg, rgba(2, 7, 20, 0.32), transparent 30%, transparent 72%, rgba(2, 7, 20, 0.2));
+    radial-gradient(ellipse at 50% 42%, transparent 0 31%, rgba(2, 7, 20, 0.04) 55%, rgba(2, 7, 20, 0.16) 100%),
+    linear-gradient(180deg, rgba(2, 7, 20, 0.2), transparent 30%, transparent 72%, rgba(2, 7, 20, 0.12));
 }
 
 .aurora-motion,
@@ -287,14 +288,6 @@ body {
   animation-delay: 330ms;
 }
 .aurora-hero__actions { display: flex; gap: 16px; margin-top: 34px; animation-delay: 410ms; }
-
-.aurora-home__sections {
-  position: relative;
-  z-index: 5;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(88, 220, 255, 0.09), transparent 30%),
-    linear-gradient(180deg, rgba(2, 7, 20, 0.76), #020714 16%, #020714 100%);
-}
 
 .aurora-trust {
   position: relative;

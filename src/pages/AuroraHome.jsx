@@ -3,11 +3,6 @@ import { Link } from "react-router-dom";
 
 import AuroraLogo from "../components/AuroraLogo";
 import AuroraFilm from "../components/AuroraFilm";
-import Footer from "../components/Footer";
-import Journal from "../components/Journal";
-import Products from "../components/Products";
-import Roadmap from "../components/Roadmap";
-import Vision from "../components/Vision";
 import "../styles/aurora-home.css";
 
 const navigation = [
@@ -86,15 +81,6 @@ export default function AuroraHome() {
           </Link>
         </div>
       </section>
-
-      <div className="aurora-home__sections">
-        <Products />
-        <Journal />
-        <Roadmap />
-        <Vision />
-      </div>
-
-      <Footer />
     </main>
   );
 }
