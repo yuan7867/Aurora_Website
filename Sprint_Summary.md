@@ -1,23 +1,20 @@
-# Aurora Hub Sprint V2.5 Summary
+# Aurora Hub Sprint V2.6 Summary
 
 ## Files Modified
 
-- `src/pages/Pricing.jsx`
-- `src/utils/productSelection.js`
+- `src/pages/LiveTradingPage.jsx`
+- `src/components/LivePerformance.jsx`
 - `Sprint_Summary.md`
 
-## Pricing Commercial Copy Improvements
+## Commercial Copy Improvements
 
-- Rewrote the Pricing hero from price-first language to product-value positioning.
-- Added a `Why Aurora Products?` content block between Hero and Step 1 using existing typography and layout classes.
-- Improved MT5 product wording around precision, capital protection and long-term consistency.
-- Improved XAU product wording around faster execution, momentum capture and trading flexibility.
-- Added Aurora Luno commercial positioning in the value introduction as a next generation digital asset platform.
-- Replaced Step 2 title with `Select Your License`.
-- Updated Monthly and Yearly license subtitles:
-  - `Flexible Monthly Access`
-  - `Best Value For Professionals`
-- Rewrote the bottom CTA as `Ready to Get Started?`.
+- Rewrote the Live Trading hero title to `Real Performance. Verified Live.`
+- Replaced the hero description with Aurora Cloud transparency messaging.
+- Added the required real-time synchronization trust statement below the hero description.
+- Updated Aurora MT5 card subtitle to `Professional AI Trading Platform`.
+- Updated Aurora XAU card subtitle to `Advanced Momentum Trading Platform`.
+- Replaced `Market Closed` / `Market Open` wording with `Market Status` and the live state text.
+- Replaced `Today's Profit` with `Today's P/L`.
 
 ## Build PASS
 
@@ -29,9 +26,8 @@
 - No UI changes.
 - No CSS changes.
 - No layout changes.
-- No card design changes.
-- No animation changes.
+- No card changes.
+- No Cloud API changes.
+- No Aurora Cloud changes.
 - No Router changes.
-- No Cloud/API changes.
-- `package.json` not modified.
-- `vite.config.js` not modified.
+- No Live Trading logic changes.

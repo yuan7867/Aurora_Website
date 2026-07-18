@@ -10,13 +10,13 @@ const products = [
     {
         id: "mt5",
         name: "Aurora MT5",
-        profile: "Conservative AI Trader",
+        profile: "Professional AI Trading Platform",
         accent: "blue"
     },
     {
         id: "xau",
         name: "Aurora XAU",
-        profile: "Aggressive Gold Trader",
+        profile: "Advanced Momentum Trading Platform",
         accent: "gold"
     }
 ];
@@ -218,7 +218,7 @@ function buildMetrics(data) {
         ["Currency", formatValue(currency)],
         ["Balance", formatMoney(firstValue(status, ["balance", "accountBalance", "account_balance"]), currency)],
         ["Equity", formatMoney(firstValue(status, ["equity", "accountEquity", "account_equity"]), currency)],
-        ["Today's Profit", formatMoney(firstValue(performance, ["todayProfit", "today_profit", "dailyProfit", "daily_profit"]), currency)],
+        ["Today's P/L", formatMoney(firstValue(performance, ["todayProfit", "today_profit", "dailyProfit", "daily_profit"]), currency)],
         ["Open Positions", formatValue(firstValue(status, ["openPositions", "open_positions", "positions"]))],
         ["Floating P/L", formatMoney(firstValue(status, ["floatingPL", "floating_pl", "floatingPnl", "floating_pnl"]), currency)],
         ["Win Rate", formatValue(firstValue(performance, ["winRate", "win_rate"]), "%")],
@@ -257,8 +257,10 @@ function LiveCard({ product, data, status }) {
 
             <div className="market-window-card">
                 <span>{marketWindow.localTimeZone}</span>
-                <strong>{marketWindow.isOpen ? "Market Open" : "Market Closed"}</strong>
+                <strong>Market Status</strong>
                 <p>
+                    {marketWindow.isOpen ? "Open" : "Closed"}
+                    <br />
                     Close in {marketWindow.closeText}
                     <br />
                     Open in {marketWindow.openText}
