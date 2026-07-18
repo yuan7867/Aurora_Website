@@ -109,17 +109,20 @@ body {
 
 .aurora-motion__ribbon--left {
   left: -9%;
+  right: auto;
   animation-duration: 28s;
 }
 
 .aurora-motion__ribbon--center {
   left: 32%;
+  right: auto;
   width: 35%;
   animation-duration: 32s;
   animation-delay: -13s;
 }
 
 .aurora-motion__ribbon--right {
+  left: auto;
   right: -4%;
   width: 38%;
   animation-name: aurora-ribbon-rise-right;
