@@ -7,12 +7,10 @@ import "../styles/aurora-home.css";
 
 const navigation = [
   ["Home", "/"],
-  ["Products", "/products"],
-  ["Live Trading", "/performance"],
+  ["Product", "/products"],
   ["Pricing", "/pricing"],
-  ["Download", "/download"],
+  ["Live Trading", "/performance"],
   ["Support", "/account/support"],
-  ["Trust", "/trust"],
 ];
 
 const trustItems = [

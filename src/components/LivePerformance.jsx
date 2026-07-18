@@ -206,7 +206,7 @@ function getMarketWindow(now = new Date()) {
     };
 }
 
-function buildMetrics(data, cloudStatus) {
+function buildMetrics(data) {
     const status = data?.status || {};
     const performance = data?.performance || {};
     const heartbeat = data?.heartbeat || {};
@@ -222,12 +222,8 @@ function buildMetrics(data, cloudStatus) {
         ["Open Positions", formatValue(firstValue(status, ["openPositions", "open_positions", "positions"]))],
         ["Floating P/L", formatMoney(firstValue(status, ["floatingPL", "floating_pl", "floatingPnl", "floating_pnl"]), currency)],
         ["Win Rate", formatValue(firstValue(performance, ["winRate", "win_rate"]), "%")],
-        ["Profit Factor", formatValue(firstValue(performance, ["profitFactor", "profit_factor"]))],
         ["Running Days", formatValue(firstValue(performance, ["runningDays", "running_days"]))],
-        ["Current Session", formatValue(firstValue(status, ["currentSession", "current_session", "session"]))],
-        ["AI Status", formatValue(firstValue(status, ["aiStatus", "ai_status"]) || firstValue(heartbeat, ["apiStatus", "api_status", "status"]))],
-        ["Last Sync", relativeTime(firstValue(status, ["lastSync", "last_sync"]) || firstValue(heartbeat, ["lastSync", "last_sync", "timestamp"]) || data?.timestamp)],
-        ["Cloud Status", cloudStatus]
+        ["Last Sync", relativeTime(firstValue(status, ["lastSync", "last_sync"]) || firstValue(heartbeat, ["lastSync", "last_sync", "timestamp"]) || data?.timestamp)]
     ];
 }
 
@@ -238,8 +234,8 @@ function LiveCard({ product, data, status }) {
     const badgeText = isOffline ? "Offline" : isStale ? "Reconnecting" : "Live";
     const marketWindow = useMemo(() => getMarketWindow(), []);
     const metrics = useMemo(
-        () => buildMetrics(data, isOffline ? "Offline" : isStale ? "Reconnecting" : "Live"),
-        [data, isOffline, isStale]
+        () => buildMetrics(data),
+        [data]
     );
 
     return (
