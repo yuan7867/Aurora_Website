@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import "../styles/products.css";
 
 const icons = {
@@ -137,8 +135,6 @@ const products = [
 ];
 
 function Products() {
-    const [compareOpen, setCompareOpen] = useState(false);
-
     return (
         <section className="products" id="products" aria-label="Aurora HY products">
             <div className="product-grid">
@@ -181,17 +177,7 @@ function Products() {
                             {product.comingSoon ? (
                                 <span className="product-buy product-disabled" aria-disabled="true">In Development</span>
                             ) : (
-                                <>
-                                    <a href={product.checkout} className="product-buy">View Access</a>
-                                    <button
-                                        type="button"
-                                        className="product-learn"
-                                        onClick={() => setCompareOpen((current) => !current)}
-                                        aria-expanded={compareOpen}
-                                    >
-                                        Compare
-                                    </button>
-                                </>
+                                <a href={product.checkout} className="product-buy">View Access</a>
                             )}
                         </div>
 
@@ -203,26 +189,6 @@ function Products() {
                     </article>
                 ))}
             </div>
-
-            {compareOpen && (
-                <div className="product-compare" aria-label="Aurora product comparison">
-                    <div>
-                        <span>Best For</span>
-                        <strong>MT5: risk-focused professionals</strong>
-                        <strong>XAU: momentum-focused professionals</strong>
-                    </div>
-                    <div>
-                        <span>Platform Focus</span>
-                        <strong>MT5: precision and reliability</strong>
-                        <strong>XAU: speed and opportunity</strong>
-                    </div>
-                    <div>
-                        <span>License</span>
-                        <strong>Commercial use</strong>
-                        <strong>Automatic updates</strong>
-                    </div>
-                </div>
-            )}
         </section>
     );
 }
