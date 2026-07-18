@@ -80,8 +80,12 @@ const pageSeo = {
     description: "View Aurora license delivery details after a completed purchase."
   },
   "/trust": {
-    title: "Company | Aurora HY",
-    description: "Learn about Aurora Technologies, our mission, vision, values and professional contact channels."
+    title: "About Aurora HY | Practical AI Software Company",
+    description:
+      "Discover the story, mission and future of Aurora HY, a Malaysian software company building practical AI products, automation platforms and cloud-connected systems.",
+    ogTitle: "Aurora HY | Building Intelligent Software for the Real World",
+    ogDescription:
+      "Learn how Aurora HY is building one connected ecosystem of practical AI products for traders, businesses and creative professionals."
   },
   "/account": {
     title: "Customer Dashboard | Aurora HY",

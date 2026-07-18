@@ -42,18 +42,20 @@ export function applySeo({
     title = DEFAULT_TITLE,
     description = DEFAULT_DESCRIPTION,
     canonical = SITE_URL,
-    type = "website"
+    type = "website",
+    ogTitle = title,
+    ogDescription = description
 }) {
     document.title = title;
     setMeta("description", description);
     setCanonical(canonical);
-    setMeta("og:title", title, "property");
-    setMeta("og:description", description, "property");
+    setMeta("og:title", ogTitle, "property");
+    setMeta("og:description", ogDescription, "property");
     setMeta("og:type", type, "property");
     setMeta("og:url", canonical, "property");
     setMeta("twitter:card", "summary");
-    setMeta("twitter:title", title);
-    setMeta("twitter:description", description);
+    setMeta("twitter:title", ogTitle);
+    setMeta("twitter:description", ogDescription);
 }
 
 export const defaultSeo = {
