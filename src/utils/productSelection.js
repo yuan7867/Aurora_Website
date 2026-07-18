@@ -2,15 +2,15 @@ export const commerceProducts = [
     {
         id: "aurora-mt5",
         name: "Aurora MT5 AI Trader",
-        profile: "Conservative Strategy",
-        summary: "Built for disciplined traders who prioritize risk control, consistency and long-term execution.",
+        profile: "Professional AI Gold Trading Platform",
+        summary: "Built for disciplined traders who value precision, capital protection and long-term consistency.",
         skuPrefix: "aurora-mt5"
     },
     {
         id: "aurora-xau",
         name: "Aurora XAU Trader",
-        profile: "Aggressive Strategy",
-        summary: "Built for traders seeking higher opportunity with active XAU execution logic.",
+        profile: "Advanced AI Gold Momentum Platform",
+        summary: "Designed for experienced traders seeking faster execution, stronger momentum capture and higher trading flexibility.",
         skuPrefix: "aurora-xau"
     }
 ];
@@ -20,14 +20,14 @@ export const subscriptions = [
         id: "monthly",
         name: "Monthly",
         price: "USD 19.90",
-        note: "Best for getting started",
+        note: "Flexible Monthly Access",
         billing: "Billed monthly"
     },
     {
         id: "yearly",
         name: "Yearly",
         price: "USD 199",
-        note: "Most Popular",
+        note: "Best Value For Professionals",
         billing: "Yearly Save 17%"
     }
 ];
