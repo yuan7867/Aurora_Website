@@ -46,6 +46,7 @@ import html
 import imaplib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -57,63 +58,7 @@ from pathlib import Path
 from typing import Any
 
 
-AUTO_REPLY_SUBJECT = "[Auto Reply] We have received your message"
-
-AUTO_REPLY_TEXT = """Dear Customer,
-
-Thank you for contacting Aurora HY.
-
-This is an automated acknowledgement confirming that we have successfully received your email.
-
-Our team will review your enquiry and respond as soon as possible.
-
-Business Hours
-Monday - Friday
-9:00 AM - 6:00 PM (Malaysia Time)
-
-If your enquiry relates to an order, please include:
-
-- Order Number
-- Product Name
-- Screenshot (if applicable)
-
-Website
-https://aurorahy.com
-
-Thank you for your patience.
-
-Best regards,
-
-Yuan
-Founder & CEO
-
-Aurora HY
-support@aurorahy.com
-"""
-
-AUTO_REPLY_HTML = """\
-<p>Dear Customer,</p>
-<p>Thank you for contacting Aurora HY.</p>
-<p>This is an automated acknowledgement confirming that we have successfully received your email.</p>
-<p>Our team will review your enquiry and respond as soon as possible.</p>
-<p><strong>Business Hours</strong><br>
-Monday - Friday<br>
-9:00 AM - 6:00 PM (Malaysia Time)</p>
-<p>If your enquiry relates to an order, please include:</p>
-<ul>
-  <li>Order Number</li>
-  <li>Product Name</li>
-  <li>Screenshot (if applicable)</li>
-</ul>
-<p><strong>Website</strong><br>
-<a href="https://aurorahy.com">https://aurorahy.com</a></p>
-<p>Thank you for your patience.</p>
-<p>Best regards,</p>
-<p>Yuan<br>
-Founder &amp; CEO</p>
-<p>Aurora HY<br>
-support@aurorahy.com</p>
-"""
+AUTO_REPLY_SUBJECT = "[Aurora HY] Your Support Request Has Been Received"
 
 SUPPORT_DOMAIN_BLOCKLIST = {"aurorahy.com", "mail.aurorahy.com"}
 
@@ -136,6 +81,46 @@ def mask_address(address: str) -> str:
         return "unknown"
     visible = local[:2] if len(local) > 2 else local[:1]
     return f"{visible}***@{domain}"
+
+
+def decode_display_name(value: str) -> str:
+    name = parseaddr(value)[0].strip()
+    if not name:
+        return ""
+
+    try:
+        return str(make_header(decode_header(name))).strip()
+    except Exception:
+        return name
+
+
+def clean_display_name(name: str) -> str:
+    cleaned = re.sub(r"\s+", " ", name).strip(" \"'<>")
+    if "@" in cleaned:
+        return ""
+    return cleaned
+
+
+def name_from_email(address: str) -> str:
+    local = address.split("@", 1)[0]
+    words = [word for word in re.split(r"[\d_.\-]+", local) if word]
+
+    if not words:
+        return "Customer"
+
+    return " ".join(word[:1].upper() + word[1:].lower() for word in words)
+
+
+def get_customer_name(message: Message, sender: str) -> str:
+    for header_name in ("Reply-To", "From"):
+        display_name = clean_display_name(decode_display_name(message.get(header_name, "")))
+        if display_name:
+            return display_name
+
+    if sender:
+        return name_from_email(sender)
+
+    return "Customer"
 
 
 def load_state(path: Path) -> dict[str, Any]:
@@ -251,14 +236,86 @@ def idempotency_key(sender: str, now: dt.datetime) -> str:
     return f"support-auto-reply/{digest}"
 
 
-def build_resend_payload(to_address: str, from_address: str, reply_to: str) -> dict[str, Any]:
+def build_auto_reply_text(customer_name: str) -> str:
+    return f"""Dear {customer_name},
+
+Thank you for contacting Aurora HY.
+
+We have successfully received your email.
+
+Your request has been securely registered in the Aurora Support System and is now awaiting review by our team.
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+Current Status
+
+✔ Request Received
+⏳ Awaiting Review
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+To help us assist you faster, please include the following whenever applicable:
+
+• Order Number
+• Product Name
+• Error Message
+• Screenshot or Screen Recording
+
+━━━━━━━━━━━━━━━━━━━━━━
+
+Website
+
+https://aurorahy.com
+
+Thank you for choosing Aurora HY.
+
+Kind regards,
+
+Yuan
+
+Founder
+
+Aurora HY
+Engineering Intelligent Software.
+
+support@aurorahy.com
+https://aurorahy.com
+"""
+
+
+def build_auto_reply_html(customer_name: str) -> str:
+    safe_name = html.escape(customer_name)
+    return f"""\
+<p>Dear {safe_name},</p>
+<p>Thank you for contacting Aurora HY.</p>
+<p>We have successfully received your email.</p>
+<p>Your request has been securely registered in the Aurora Support System and is now awaiting review by our team.</p>
+<p>━━━━━━━━━━━━━━━━━━━━━━</p>
+<p><strong>Current Status</strong></p>
+<p>✔ Request Received<br>⏳ Awaiting Review</p>
+<p>━━━━━━━━━━━━━━━━━━━━━━</p>
+<p>To help us assist you faster, please include the following whenever applicable:</p>
+<p>• Order Number<br>• Product Name<br>• Error Message<br>• Screenshot or Screen Recording</p>
+<p>━━━━━━━━━━━━━━━━━━━━━━</p>
+<p><strong>Website</strong></p>
+<p><a href="https://aurorahy.com">https://aurorahy.com</a></p>
+<p>Thank you for choosing Aurora HY.</p>
+<p>Kind regards,</p>
+<p>Yuan</p>
+<p>Founder</p>
+<p>Aurora HY<br>Engineering Intelligent Software.</p>
+<p>support@aurorahy.com<br><a href="https://aurorahy.com">https://aurorahy.com</a></p>
+"""
+
+
+def build_resend_payload(to_address: str, from_address: str, reply_to: str, customer_name: str) -> dict[str, Any]:
     return {
         "from": from_address,
         "to": [to_address],
         "reply_to": reply_to,
         "subject": AUTO_REPLY_SUBJECT,
-        "text": AUTO_REPLY_TEXT,
-        "html": AUTO_REPLY_HTML,
+        "text": build_auto_reply_text(customer_name),
+        "html": build_auto_reply_html(customer_name),
     }
 
 
@@ -348,6 +405,7 @@ def process_message(
     now = utc_now()
     support_address = config["support_route_address"]
     sender = get_reply_target(message)
+    customer_name = get_customer_name(message, sender)
     message_id = message.get("Message-ID", "").strip()
     uid_text = uid.decode("utf-8", errors="replace")
 
@@ -393,6 +451,7 @@ def process_message(
         to_address=sender,
         from_address=config["from_address"],
         reply_to=config["reply_to"],
+        customer_name=customer_name,
     )
     key = idempotency_key(sender, now)
 
