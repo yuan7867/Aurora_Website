@@ -426,12 +426,30 @@ def run_once(*, dry_run: bool, config: dict[str, str], state_file: Path) -> int:
 
     with imaplib.IMAP4_SSL(config["imap_host"]) as mailbox:
         mailbox.login(config["imap_user"], config["imap_password"])
-        mailbox.select(config["imap_mailbox"])
+        select_status, select_data = mailbox.select(config["imap_mailbox"])
+        if select_status != "OK":
+            raise RuntimeError(f"IMAP mailbox select failed: {config['imap_mailbox']}")
+
+        mailbox_total = select_data[0].decode("utf-8", errors="replace") if select_data and select_data[0] else "0"
+        print("Selected Mailbox:")
+        print(config["imap_mailbox"])
+        print("IMAP Search Criteria:")
+        print(config["imap_search"])
+        print("Mailbox total:")
+        print(mailbox_total)
+        print("Last UID:")
+        print(state.get("last_uid", "not_used"))
+
         status, data = mailbox.uid("SEARCH", None, config["imap_search"])
         if status != "OK":
             raise RuntimeError("IMAP search failed.")
 
         uids = data[0].split() if data and data[0] else []
+        print("Search returned:")
+        print(len(uids))
+        print("UID list:")
+        print(" ".join(uid.decode("utf-8", errors="replace") for uid in uids) if uids else "<empty>")
+
         processed = 0
 
         for uid in uids:
