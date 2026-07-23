@@ -41,6 +41,16 @@ export async function getCustomer() {
     return requestCommerce("/customer");
 }
 
+export async function getCustomerDownloads() {
+    return requestCommerce("/customer/downloads");
+}
+
+export async function createDownloadToken(productId) {
+    return requestCommerce(`/customer/downloads/${encodeURIComponent(productId)}/token`, {
+        method: "POST"
+    });
+}
+
 export async function registerCustomer(payload) {
     return requestCommerce("/identity/register", {
         method: "POST",

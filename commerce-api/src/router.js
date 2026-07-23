@@ -25,6 +25,11 @@ import {
     getStatusData,
     saveLiveTradingData
 } from "./services/liveTradingService.js";
+import {
+    consumeCustomerDownloadToken,
+    createCustomerDownloadToken,
+    getCustomerDownloadCenter
+} from "./services/downloadCenterService.js";
 import { processSupportInboundEmail } from "./services/supportGatewayService.js";
 import { parseJsonBody, readJsonBody, readRawBody, sendJson } from "./utils/http.js";
 
@@ -115,6 +120,16 @@ function sendIdentityError(response, error) {
         status: "error",
         message: error.message
     });
+}
+
+function getRequestIp(request) {
+    const forwardedFor = request.headers["x-forwarded-for"];
+
+    if (forwardedFor) {
+        return String(forwardedFor).split(",")[0].trim();
+    }
+
+    return request.socket?.remoteAddress || "";
 }
 
 async function sendCloudData(response, loader) {
@@ -245,6 +260,65 @@ export async function commerceRouter(request, response) {
         } catch (error) {
             sendJson(response, 401, {
                 status: "unauthorized",
+                message: error.message
+            });
+        }
+        return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/customer/downloads") {
+        try {
+            const customer = await getAuthenticatedCustomer(request.headers.authorization);
+            const downloads = await getCustomerDownloadCenter(customer);
+            sendJson(response, 200, {
+                status: "ok",
+                downloads
+            });
+        } catch (error) {
+            sendJson(response, error.statusCode || 401, {
+                status: "error",
+                message: error.message
+            });
+        }
+        return;
+    }
+
+    if (request.method === "POST" && url.pathname.startsWith("/customer/downloads/") && url.pathname.endsWith("/token")) {
+        try {
+            const customer = await getAuthenticatedCustomer(request.headers.authorization);
+            const productId = decodeURIComponent(url.pathname.split("/").at(-2) || "");
+            const token = await createCustomerDownloadToken({
+                customer,
+                productId
+            });
+            sendJson(response, 200, token);
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, {
+                status: "error",
+                code: error.code || "DOWNLOAD_TOKEN_ERROR",
+                message: error.message
+            });
+        }
+        return;
+    }
+
+    if (request.method === "GET" && url.pathname.startsWith("/downloads/token/")) {
+        try {
+            const token = decodeURIComponent(url.pathname.split("/").pop() || "");
+            const result = await consumeCustomerDownloadToken({
+                token,
+                ipAddress: getRequestIp(request),
+                userAgent: request.headers["user-agent"] || ""
+            });
+            response.writeHead(302, {
+                location: result.url,
+                "cache-control": "no-store"
+            });
+            response.end();
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, {
+                status: "error",
+                code: error.code || "DOWNLOAD_TOKEN_ERROR",
                 message: error.message
             });
         }

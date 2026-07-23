@@ -27,7 +27,7 @@ test("Live Trading page reads MT5 and XAU and hides broker and server metrics", 
     assert.match(component, /getLiveProduct\(productId\)/);
     assert.doesNotMatch(component, /\["Broker"/);
     assert.doesNotMatch(component, /\["Server"/);
-    assert.match(component, /Market Open/);
+    assert.match(component, /Market Status/);
     assert.match(component, /Close in/);
     assert.match(component, /Open in/);
 });

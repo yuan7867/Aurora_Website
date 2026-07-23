@@ -11,7 +11,7 @@
     "email:retry": "node src/cli/retryLicenseEmail.js",
     "identity:import-json": "node src/cli/importCustomersJson.js",
     "test": "node --test",
-    "check": "node --check src/server.js && node --check src/storage/migrateCommerce.js && node --check src/dispatchers/emailDispatcher.js && node --check src/services/identityService.js && node --check src/services/supportGatewayService.js && node --check src/storage/supportGatewayStore.js && node --check src/cli/provisionPayPalPlans.js && node --check src/cli/reconcileSubscriptionDelivery.js && node --check src/cli/retryLicenseEmail.js && node --check src/cli/importCustomersJson.js && node --check src/cli/sendSupportAutoReply.js"
+    "check": "node --check src/server.js && node --check src/storage/migrateCommerce.js && node --check src/dispatchers/emailDispatcher.js && node --check src/services/identityService.js && node --check src/services/supportGatewayService.js && node --check src/services/downloadCenterService.js && node --check src/storage/supportGatewayStore.js && node --check src/storage/downloadStore.js && node --check src/clients/r2Client.js && node --check src/cli/provisionPayPalPlans.js && node --check src/cli/reconcileSubscriptionDelivery.js && node --check src/cli/retryLicenseEmail.js && node --check src/cli/importCustomersJson.js && node --check src/cli/sendSupportAutoReply.js"
   },
   "dependencies": {
     "pg": "^8.13.1"

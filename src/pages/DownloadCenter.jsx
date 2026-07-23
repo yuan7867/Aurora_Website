@@ -2,25 +2,26 @@ import { useEffect, useState } from "react";
 
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
-import { getCustomer } from "../services/commerceApi.js";
+import { createDownloadToken, getCustomerDownloads } from "../services/commerceApi.js";
 
 import "../styles/customer.css";
 
 function DownloadCenter() {
-    const [downloads, setDownloads] = useState([]);
+    const [downloads, setDownloads] = useState({ products: [], history: [] });
     const [status, setStatus] = useState("loading");
+    const [action, setAction] = useState("");
 
     useEffect(() => {
         let mounted = true;
 
-        getCustomer()
+        getCustomerDownloads()
             .then((payload) => {
                 if (!mounted) {
                     return;
                 }
 
-                setDownloads(payload.customer?.downloads || []);
-                setStatus(payload.customer ? "ready" : "missing");
+                setDownloads(payload.downloads || { products: [], history: [] });
+                setStatus("ready");
             })
             .catch(() => {
                 if (mounted) {
@@ -33,6 +34,17 @@ function DownloadCenter() {
         };
     }, []);
 
+    async function startDownload(productId) {
+        setAction(productId);
+        try {
+            const token = await createDownloadToken(productId);
+            window.location.href = token.tokenUrl;
+        } catch (error) {
+            setAction("");
+            window.alert(error.message);
+        }
+    }
+
     return (
         <>
             <Navbar />
@@ -40,9 +52,10 @@ function DownloadCenter() {
             <main className="customer-page">
                 <section className="customer-hero">
                     <span className="customer-tag">Download Center</span>
-                    <h1>Aurora release downloads.</h1>
+                    <h1>Aurora commercial downloads.</h1>
                     <p>
-                        Download access is based on purchased products in the Aurora Commerce customer record.
+                        Download access is verified through your Aurora commercial license. Each download uses a
+                        private one-time link that expires after 10 minutes.
                     </p>
                     <div className="customer-actions">
                         <a className="customer-button" href="/account/downloads">Open My Downloads</a>
@@ -67,20 +80,60 @@ function DownloadCenter() {
 
                     {status === "missing" && (
                         <article className="customer-card">
-                            <h2>No Purchased Downloads</h2>
-                            <p>Complete checkout before downloads appear here.</p>
-                            <a className="customer-button" href="/pricing">View Pricing</a>
+                            <h2>Login Required</h2>
+                            <p>Login with your verified Aurora customer account to access commercial downloads.</p>
+                            <a className="customer-button" href="/login">Login</a>
                         </article>
                     )}
 
-                    {status === "ready" && downloads.map((download) => (
-                        <article className="customer-card" key={download.id}>
-                            <h2>{download.productName}</h2>
+                    {status === "ready" && downloads.products.map((product) => (
+                        <article className="customer-card" key={product.id}>
+                            <h2>{product.name}</h2>
                             <div className="trust-row">
                                 <span>Status</span>
-                                <strong>{download.status}</strong>
+                                <strong>{product.status}</strong>
                             </div>
-                            <a className="customer-button" href={download.url}>Download</a>
+                            <div className="trust-row">
+                                <span>Subscription</span>
+                                <strong>{product.subscription}</strong>
+                            </div>
+                            <div className="trust-row">
+                                <span>Current Version</span>
+                                <strong>{product.currentVersion}</strong>
+                            </div>
+                            <div className="trust-row">
+                                <span>Released</span>
+                                <strong>{product.released}</strong>
+                            </div>
+                            <div className="trust-row">
+                                <span>License</span>
+                                <strong>{product.license}</strong>
+                            </div>
+                            <div className="trust-row">
+                                <span>Expires</span>
+                                <strong>{product.expires || "Not Active"}</strong>
+                            </div>
+                            <div className="trust-row">
+                                <span>SHA256</span>
+                                <strong>{product.sha256}</strong>
+                            </div>
+                            <h3>Release Notes</h3>
+                            <ul>
+                                {product.releaseNotes.changes.map((item) => <li key={item}>{item}</li>)}
+                                {product.releaseNotes.bugFixes.map((item) => <li key={item}>{item}</li>)}
+                            </ul>
+                            <h3>Windows Installation Guide</h3>
+                            <ul>
+                                {product.installationGuide.map((item) => <li key={item}>{item}</li>)}
+                            </ul>
+                            <button
+                                className="customer-button"
+                                disabled={!product.canDownload || action === product.id}
+                                type="button"
+                                onClick={() => startDownload(product.id)}
+                            >
+                                {action === product.id ? "Preparing..." : "Download Latest"}
+                            </button>
                         </article>
                     ))}
 

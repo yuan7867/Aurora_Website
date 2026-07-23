@@ -1,20 +1,34 @@
 import { useEffect, useState } from "react";
 
 import CustomerLayout from "../../components/layouts/CustomerLayout";
-import { getCustomer } from "../../services/commerceApi.js";
+import { createDownloadToken, getCustomer, getCustomerDownloads } from "../../services/commerceApi.js";
 
 function AccountDashboard() {
     const [customer, setCustomer] = useState(null);
+    const [downloadCenter, setDownloadCenter] = useState({ products: [] });
     const [status, setStatus] = useState("loading");
+    const [action, setAction] = useState("");
 
     useEffect(() => {
-        getCustomer()
-            .then((payload) => {
+        Promise.all([getCustomer(), getCustomerDownloads()])
+            .then(([payload, downloadPayload]) => {
                 setCustomer(payload.customer);
+                setDownloadCenter(downloadPayload.downloads || { products: [] });
                 setStatus(payload.customer ? "ready" : "missing");
             })
             .catch(() => setStatus("offline"));
     }, []);
+
+    async function startDownload(productId) {
+        setAction(productId);
+        try {
+            const token = await createDownloadToken(productId);
+            window.location.href = token.tokenUrl;
+        } catch (error) {
+            setAction("");
+            window.alert(error.message);
+        }
+    }
 
     const products = customer?.products || [];
     const licenses = customer?.licenses || [];
@@ -85,6 +99,49 @@ function AccountDashboard() {
                     <p>Support requests linked to this customer account.</p>
                 </article>
             </section>
+
+            {status === "ready" && (
+                <section className="customer-grid two">
+                    {downloadCenter.products.map((product) => (
+                        <article className="customer-card" key={product.id}>
+                            <h2>{product.name}</h2>
+                            <div className="trust-row">
+                                <span>Status</span>
+                                <strong>{product.status}</strong>
+                            </div>
+                            <div className="trust-row">
+                                <span>Subscription</span>
+                                <strong>{product.subscription}</strong>
+                            </div>
+                            <div className="trust-row">
+                                <span>Current Version</span>
+                                <strong>{product.currentVersion}</strong>
+                            </div>
+                            <div className="trust-row">
+                                <span>Released</span>
+                                <strong>{product.released}</strong>
+                            </div>
+                            <div className="trust-row">
+                                <span>License</span>
+                                <strong>{product.license}</strong>
+                            </div>
+                            <div className="trust-row">
+                                <span>Expires</span>
+                                <strong>{product.expires || "Not Active"}</strong>
+                            </div>
+                            <a className="customer-button secondary" href="/account/downloads">Release Notes</a>
+                            <button
+                                className="customer-button"
+                                disabled={!product.canDownload || action === product.id}
+                                type="button"
+                                onClick={() => startDownload(product.id)}
+                            >
+                                {action === product.id ? "Preparing..." : "Download Latest"}
+                            </button>
+                        </article>
+                    ))}
+                </section>
+            )}
         </CustomerLayout>
     );
 }
