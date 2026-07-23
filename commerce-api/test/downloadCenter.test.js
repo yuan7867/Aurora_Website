@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-process.env.CLOUDFLARE_R2_ACCOUNT_ID = "account123";
-process.env.CLOUDFLARE_R2_ACCESS_KEY_ID = "AKIA_TEST_DOWNLOAD";
-process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY = "secret-download-key";
-process.env.CLOUDFLARE_R2_BUCKET_NAME = "aurora-commercial-downloads";
+process.env.R2_ACCOUNT_ID = "account123";
+process.env.R2_ACCESS_KEY_ID = "AKIA_TEST_DOWNLOAD";
+process.env.R2_SECRET_ACCESS_KEY = "secret-download-key";
+process.env.R2_BUCKET = "aurora-downloads";
 process.env.R2_PRESIGNED_URL_SECONDS = "600";
 
 const { createR2PresignedGetUrl } = await import("../src/clients/r2Client.js");
@@ -36,7 +36,7 @@ test("R2 presigned URL uses private Cloudflare R2 and ten minute expiry", () => 
     const parsed = new URL(url);
     assert.equal(parsed.hostname, "account123.r2.cloudflarestorage.com");
     assert.equal(parsed.searchParams.get("X-Amz-Expires"), "600");
-    assert.match(parsed.pathname, /aurora-commercial-downloads\/releases\/aurora-mt5-ai-trader/);
+    assert.match(parsed.pathname, /aurora-downloads\/releases\/aurora-mt5-ai-trader/);
     assert.equal(url.includes("secret-download-key"), false);
 });
 
