@@ -54,7 +54,7 @@ export async function sendResendEmail({
             subject,
             html,
             text,
-            ...(replyTo ? { reply_to: replyTo } : {})
+            ...(replyTo ? { reply_to: [replyTo] } : {})
         })
     });
     const data = await response.json().catch(() => ({}));

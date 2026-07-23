@@ -129,7 +129,7 @@ test("support auto reply can reuse Resend dispatcher with support from and reply
     const body = JSON.parse(request.options.body);
     assert.equal(request.url, "https://api.resend.com/emails");
     assert.equal(body.from, "Aurora HY Support <support@mail.aurorahy.com>");
-    assert.equal(body.reply_to, "support@aurorahy.com");
+    assert.deepEqual(body.reply_to, ["support@aurorahy.com"]);
 });
 
 test("successful send marks delivery sent with Resend id", async () => {
