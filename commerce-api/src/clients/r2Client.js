@@ -64,6 +64,7 @@ export function createR2PresignedGetUrl({ objectKey, filename, expiresIn = confi
         "X-Amz-Credential": credential,
         "X-Amz-Date": timestamp,
         "X-Amz-Expires": Math.max(60, Math.min(Number(expiresIn) || 600, 600)),
+        "X-Amz-Content-Sha256": "UNSIGNED-PAYLOAD",
         "X-Amz-SignedHeaders": "host",
         "response-content-disposition": `attachment; filename="${String(filename || objectKey.split("/").pop() || "Aurora-Download.exe").replace(/"/g, "")}"`
     };

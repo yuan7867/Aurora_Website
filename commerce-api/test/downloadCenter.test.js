@@ -36,6 +36,7 @@ test("R2 presigned URL uses private Cloudflare R2 and ten minute expiry", () => 
     const parsed = new URL(url);
     assert.equal(parsed.hostname, "account123.r2.cloudflarestorage.com");
     assert.equal(parsed.searchParams.get("X-Amz-Expires"), "600");
+    assert.equal(parsed.searchParams.get("X-Amz-Content-Sha256"), "UNSIGNED-PAYLOAD");
     assert.match(parsed.pathname, /aurora-downloads\/releases\/aurora-mt5-ai-trader/);
     assert.equal(url.includes("secret-download-key"), false);
 });
