@@ -167,25 +167,33 @@ def decode_subject(message: Message) -> str:
         return raw
 
 
-def get_recipient_headers(message: Message) -> list[str]:
+def get_recipient_headers(message: Message) -> list[tuple[str, str]]:
     header_names = [
         "To",
-        "Cc",
         "Delivered-To",
-        "Envelope-To",
         "X-Original-To",
+        "Envelope-To",
         "X-Forwarded-To",
-        "Apparently-To",
+        "Original-Recipient",
     ]
-    values: list[str] = []
+    values: list[tuple[str, str]] = []
     for name in header_names:
-        values.extend(message.get_all(name, []))
+        for value in message.get_all(name, []):
+            values.append((name, str(value)))
     return values
 
 
-def was_routed_to_support(message: Message, support_address: str) -> bool:
-    addresses = [addr.lower() for _, addr in getaddresses(get_recipient_headers(message))]
-    return support_address.lower() in addresses
+def find_support_route(message: Message, support_address: str) -> tuple[str, str] | None:
+    expected = support_address.lower()
+
+    for header_name, header_value in get_recipient_headers(message):
+        normalized_value = header_value.lower()
+        parsed_addresses = [addr.lower() for _, addr in getaddresses([header_value])]
+
+        if expected in parsed_addresses or expected in normalized_value:
+            return header_name, support_address
+
+    return None
 
 
 def get_reply_target(message: Message) -> str:
@@ -311,8 +319,15 @@ def process_message(
         mark_seen(mailbox, uid)
         return "skipped:message_already_handled"
 
-    if not was_routed_to_support(message, support_address):
+    route_match = find_support_route(message, support_address)
+    if not route_match:
         return "skipped:not_support_route"
+
+    matched_header, matched_address = route_match
+    print("Support Detection")
+    print("Matched Header:")
+    print(matched_header)
+    print(matched_address)
 
     if is_own_or_internal_sender(sender):
         mark_seen(mailbox, uid)
