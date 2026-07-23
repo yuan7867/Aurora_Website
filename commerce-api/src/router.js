@@ -30,6 +30,7 @@ import {
     createCustomerDownloadToken,
     getCustomerDownloadCenter
 } from "./services/downloadCenterService.js";
+import { getLatestUpdate } from "./services/updateService.js";
 import { processSupportInboundEmail } from "./services/supportGatewayService.js";
 import { parseJsonBody, readJsonBody, readRawBody, sendJson } from "./utils/http.js";
 
@@ -204,6 +205,21 @@ export async function commerceRouter(request, response) {
     if (request.method === "GET" && url.pathname.startsWith("/api/v1/live/")) {
         const productId = decodeURIComponent(url.pathname.split("/").pop() || "");
         await sendCloudData(response, () => getLiveTradingProductData(productId));
+        return;
+    }
+
+    if (request.method === "GET" && url.pathname.startsWith("/api/update/latest/")) {
+        try {
+            const product = decodeURIComponent(url.pathname.split("/").pop() || "");
+            const latest = await getLatestUpdate(product);
+            sendJson(response, 200, latest);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, {
+                status: "error",
+                code: error.code || "UPDATE_ERROR",
+                message: error.message
+            });
+        }
         return;
     }
 

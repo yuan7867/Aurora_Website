@@ -1,0 +1,79 @@
+name: Aurora Update Release
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "Aurora_Releases/**"
+  workflow_dispatch:
+    inputs:
+      product:
+        description: "Product to publish: mt5 or xau"
+        required: true
+        type: choice
+        options:
+          - mt5
+          - xau
+      version:
+        description: "Latest version, for example 2.4.1"
+        required: true
+        type: string
+      minimum_version:
+        description: "Minimum supported version"
+        required: true
+        type: string
+      force_update:
+        description: "Force customers to update"
+        required: true
+        type: boolean
+        default: false
+      release_date:
+        description: "Release date, YYYY-MM-DD"
+        required: true
+        type: string
+      artifact_path:
+        description: "Path to the built EXE committed or generated in the workflow"
+        required: true
+        type: string
+      release_notes:
+        description: "Release notes separated by semicolons"
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      PRODUCT: ${{ inputs.product }}
+      VERSION: ${{ inputs.version }}
+      MINIMUM_VERSION: ${{ inputs.minimum_version }}
+      FORCE_UPDATE: ${{ inputs.force_update }}
+      RELEASE_DATE: ${{ inputs.release_date }}
+      ARTIFACT_PATH: ${{ inputs.artifact_path }}
+      RELEASE_NOTES: ${{ inputs.release_notes }}
+      RELEASE_MANIFEST: Aurora_Releases/release.json
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: commerce-api/package-lock.json
+
+      - name: Install Commerce dependencies
+        working-directory: commerce-api
+        run: npm ci
+
+      - name: Publish Aurora update to Cloudflare R2
+        working-directory: commerce-api
+        run: npm run update:publish

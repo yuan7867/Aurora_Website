@@ -32,6 +32,8 @@ export const config = {
     r2Endpoint: process.env.R2_ENDPOINT || process.env.CLOUDFLARE_R2_ENDPOINT || "",
     mt5R2ObjectKey: process.env.MT5_R2_OBJECT_KEY || "releases/aurora-mt5-ai-trader/Aurora_MT5_AI_Trader_2.4.0.exe",
     xauR2ObjectKey: process.env.XAU_R2_OBJECT_KEY || "releases/aurora-xau-trader/Aurora_XAU_Trader_1.0.0.exe",
+    mt5UpdateManifestKey: process.env.MT5_UPDATE_MANIFEST_KEY || "updates/mt5/version.json",
+    xauUpdateManifestKey: process.env.XAU_UPDATE_MANIFEST_KEY || "updates/xau/version.json",
     mt5ReleaseSha256: process.env.MT5_RELEASE_SHA256 || "TBD_UPLOAD_RELEASE_AND_SET_SHA256",
     xauReleaseSha256: process.env.XAU_RELEASE_SHA256 || "TBD_UPLOAD_RELEASE_AND_SET_SHA256",
     downloadTokenTtlMinutes: Number(process.env.DOWNLOAD_TOKEN_TTL_MINUTES || 10),
