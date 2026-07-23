@@ -15,7 +15,8 @@ Required environment variables:
 Optional environment variables:
     SUPPORT_IMAP_HOST          Default: imap.gmail.com
     SUPPORT_IMAP_MAILBOX       Default: INBOX
-    SUPPORT_IMAP_SEARCH        Default: UNSEEN
+    SUPPORT_IMAP_SEARCH        Fixed: ALL. IMAP read/unread flags are not business state.
+    SUPPORT_IMAP_LIMIT         Default: 50
     SUPPORT_FROM               Default: Aurora HY Support <support@mail.aurorahy.com>
     SUPPORT_REPLY_TO           Default: support@aurorahy.com
     SUPPORT_ROUTE_ADDRESS      Default: support@aurorahy.com
@@ -140,18 +141,19 @@ def mask_address(address: str) -> str:
 
 def load_state(path: Path) -> dict[str, Any]:
     if not path.exists():
-        return {"senders": {}, "message_ids": {}}
+        return {"senders": {}, "message_ids": {}, "uids": {}}
 
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return {"senders": {}, "message_ids": {}}
+        return {"senders": {}, "message_ids": {}, "uids": {}}
 
     if not isinstance(data, dict):
-        return {"senders": {}, "message_ids": {}}
+        return {"senders": {}, "message_ids": {}, "uids": {}}
 
     data.setdefault("senders", {})
     data.setdefault("message_ids", {})
+    data.setdefault("uids", {})
     return data
 
 
@@ -331,8 +333,12 @@ def send_resend_email(
         raise RuntimeError(f"Resend request failed: {exc.reason}") from exc
 
 
-def mark_seen(mailbox: imaplib.IMAP4_SSL, uid: bytes) -> None:
-    mailbox.uid("STORE", uid, "+FLAGS", r"(\Seen)")
+def mark_message_handled(state: dict[str, Any], message_id: str, uid: str, now: dt.datetime) -> None:
+    handled_at = now.isoformat()
+    if message_id:
+        state.setdefault("message_ids", {})[message_id] = handled_at
+    if uid:
+        state.setdefault("uids", {})[uid] = handled_at
 
 
 def process_message(
@@ -350,17 +356,23 @@ def process_message(
     support_address = config["support_route_address"]
     sender = get_reply_target(message)
     message_id = message.get("Message-ID", "").strip()
+    uid_text = uid.decode("utf-8", errors="replace")
 
     if not sender:
-        mark_seen(mailbox, uid)
+        mark_message_handled(state, message_id, uid_text, now)
+        save_state(state_file, state)
         return "skipped:no_sender"
 
     if message_id and message_id in state.get("message_ids", {}):
-        mark_seen(mailbox, uid)
         return "skipped:message_already_handled"
+
+    if uid_text and uid_text in state.get("uids", {}):
+        return "skipped:uid_already_handled"
 
     route_match = find_support_route(message, support_address)
     if not route_match:
+        mark_message_handled(state, message_id, uid_text, now)
+        save_state(state_file, state)
         return "skipped:not_support_route"
 
     matched_header, matched_address = route_match
@@ -370,15 +382,18 @@ def process_message(
     print(matched_address)
 
     if is_own_or_internal_sender(sender):
-        mark_seen(mailbox, uid)
+        mark_message_handled(state, message_id, uid_text, now)
+        save_state(state_file, state)
         return "skipped:internal_sender"
 
     if is_auto_generated(message):
-        mark_seen(mailbox, uid)
+        mark_message_handled(state, message_id, uid_text, now)
+        save_state(state_file, state)
         return "skipped:auto_generated"
 
     if already_replied_recently(state, sender, now):
-        mark_seen(mailbox, uid)
+        mark_message_handled(state, message_id, uid_text, now)
+        save_state(state_file, state)
         return f"skipped:24h_limit:{mask_address(sender)}"
 
     payload = build_resend_payload(
@@ -399,10 +414,8 @@ def process_message(
     )
 
     state.setdefault("senders", {})[sender] = now.isoformat()
-    if message_id:
-        state.setdefault("message_ids", {})[message_id] = now.isoformat()
+    mark_message_handled(state, message_id, uid_text, now)
     save_state(state_file, state)
-    mark_seen(mailbox, uid)
 
     return f"sent:{mask_address(sender)}"
 
@@ -438,21 +451,28 @@ def run_once(*, dry_run: bool, config: dict[str, str], state_file: Path) -> int:
         print("Mailbox total:")
         print(mailbox_total)
         print("Last UID:")
-        print(state.get("last_uid", "not_used"))
+        print("not_used")
 
         status, data = mailbox.uid("SEARCH", None, config["imap_search"])
         if status != "OK":
             raise RuntimeError("IMAP search failed.")
 
         uids = data[0].split() if data and data[0] else []
+        try:
+            imap_limit = max(1, int(config["imap_limit"]))
+        except ValueError:
+            imap_limit = 50
+        recent_uids = uids[-imap_limit:]
         print("Search returned:")
         print(len(uids))
+        print("Recent UID limit:")
+        print(imap_limit)
         print("UID list:")
-        print(" ".join(uid.decode("utf-8", errors="replace") for uid in uids) if uids else "<empty>")
+        print(" ".join(uid.decode("utf-8", errors="replace") for uid in recent_uids) if recent_uids else "<empty>")
 
         processed = 0
 
-        for uid in uids:
+        for uid in recent_uids:
             status, fetched = mailbox.uid("FETCH", uid, "(RFC822)")
             if status != "OK" or not fetched:
                 continue
@@ -481,7 +501,8 @@ def build_config() -> dict[str, str]:
         "imap_user": env("SUPPORT_IMAP_USER"),
         "imap_password": env("SUPPORT_IMAP_PASSWORD"),
         "imap_mailbox": env("SUPPORT_IMAP_MAILBOX", "INBOX"),
-        "imap_search": env("SUPPORT_IMAP_SEARCH", "UNSEEN"),
+        "imap_search": "ALL",
+        "imap_limit": env("SUPPORT_IMAP_LIMIT", "50"),
         "from_address": env("SUPPORT_FROM", "Aurora HY Support <support@mail.aurorahy.com>"),
         "reply_to": env("SUPPORT_REPLY_TO", "support@aurorahy.com"),
         "support_route_address": env("SUPPORT_ROUTE_ADDRESS", "support@aurorahy.com"),
