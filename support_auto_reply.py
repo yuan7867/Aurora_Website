@@ -261,6 +261,12 @@ def build_resend_payload(to_address: str, from_address: str, reply_to: str) -> d
     }
 
 
+def sanitize_request_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    sanitized = dict(payload)
+    sanitized["to"] = [mask_address(address) for address in payload.get("to", [])]
+    return sanitized
+
+
 def send_resend_email(
     *,
     api_url: str,
@@ -270,11 +276,24 @@ def send_resend_email(
     timeout_seconds: int = 20,
 ) -> dict[str, Any]:
     body = json.dumps(payload).encode("utf-8")
+    request_headers = {
+        "Authorization": "Bearer ****",
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotency,
+    }
+
     print("Resend Request")
-    print("API URL:")
+    print("HTTP Method")
+    print("POST")
+    print("URL")
     print(api_url)
-    print("Token:")
-    print("<hidden>")
+    print("Request Headers")
+    for header_name, header_value in request_headers.items():
+        print(f"{header_name}: {header_value}")
+    print("Content-Type")
+    print("application/json")
+    print("Request JSON")
+    print(json.dumps(sanitize_request_payload(payload), indent=2, sort_keys=True))
     print("From:")
     print(payload.get("from", ""))
     print("Reply-To:")
