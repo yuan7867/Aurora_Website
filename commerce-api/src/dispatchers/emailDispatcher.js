@@ -19,7 +19,16 @@ export function isRetryableEmailError(error) {
     return error.statusCode === 429 || error.statusCode >= 500;
 }
 
-export async function sendResendEmail({ deliveryId, idempotencyKey, to, subject, html, text }, fetchImpl = globalThis.fetch) {
+export async function sendResendEmail({
+    deliveryId,
+    idempotencyKey,
+    to,
+    subject,
+    html,
+    text,
+    from = config.emailFrom,
+    replyTo = ""
+}, fetchImpl = globalThis.fetch) {
     if (!config.emailApiUrl) {
         const error = new Error("EMAIL_API_URL is not configured.");
         error.statusCode = 503;
@@ -40,11 +49,12 @@ export async function sendResendEmail({ deliveryId, idempotencyKey, to, subject,
             "Idempotency-Key": idempotencyKey || `license-delivery/${deliveryId}`
         },
         body: JSON.stringify({
-            from: config.emailFrom,
+            from,
             to,
             subject,
             html,
-            text
+            text,
+            ...(replyTo ? { reply_to: replyTo } : {})
         })
     });
     const data = await response.json().catch(() => ({}));

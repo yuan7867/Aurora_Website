@@ -46,10 +46,9 @@ import html
 import imaplib
 import json
 import os
+import subprocess
 import sys
 import time
-import urllib.error
-import urllib.request
 from email.header import decode_header, make_header
 from email.message import Message
 from email.policy import default
@@ -277,25 +276,9 @@ def send_resend_email(
     idempotency: str,
     timeout_seconds: int = 20,
 ) -> dict[str, Any]:
-    body = json.dumps(payload).encode("utf-8")
-    request_headers = {
-        "Authorization": "Bearer ****",
-        "Content-Type": "application/json",
-        "Idempotency-Key": idempotency,
-    }
-
-    print("Resend Request")
-    print("HTTP Method")
-    print("POST")
-    print("URL")
-    print(api_url)
-    print("Request Headers")
-    for header_name, header_value in request_headers.items():
-        print(f"{header_name}: {header_value}")
-    print("Content-Type")
-    print("application/json")
-    print("Request JSON")
-    print(json.dumps(sanitize_request_payload(payload), indent=2, sort_keys=True))
+    print("Website Email Service")
+    print("Dispatcher:")
+    print("commerce-api/src/dispatchers/emailDispatcher.js")
     print("From:")
     print(payload.get("from", ""))
     print("Reply-To:")
@@ -304,33 +287,43 @@ def send_resend_email(
     print(", ".join(payload.get("to", [])))
     print("Subject:")
     print(payload.get("subject", ""))
+    print("Request JSON")
+    print(json.dumps(sanitize_request_payload(payload), indent=2, sort_keys=True))
 
-    request = urllib.request.Request(
-        api_url,
-        data=body,
-        method="POST",
-        headers={
-            "Authorization": f"Bearer {api_token}",
-            "Content-Type": "application/json",
-            "Idempotency-Key": idempotency,
-        },
+    root = Path(__file__).resolve().parent
+    helper = root / "commerce-api" / "src" / "cli" / "sendSupportAutoReply.js"
+    helper_input = {
+        "idempotencyKey": idempotency,
+        "to": payload.get("to", []),
+        "subject": payload.get("subject", ""),
+        "html": payload.get("html", ""),
+        "text": payload.get("text", ""),
+    }
+    helper_env = os.environ.copy()
+    helper_env["EMAIL_API_URL"] = api_url
+    helper_env["SUPPORT_AUTO_REPLY_FROM"] = payload.get("from", "")
+    helper_env["SUPPORT_AUTO_REPLY_REPLY_TO"] = payload.get("reply_to", "")
+
+    completed = subprocess.run(
+        ["node", str(helper)],
+        input=json.dumps(helper_input),
+        text=True,
+        capture_output=True,
+        cwd=str(root / "commerce-api"),
+        env=helper_env,
+        timeout=timeout_seconds,
+        check=False,
     )
 
-    try:
-        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        response_body = exc.read().decode("utf-8", errors="replace")
-        if exc.code == 403:
-            print("HTTP Status")
-            print(exc.code)
-            print("Response Body")
-            print(response_body)
-            print("Response Headers")
-            print(str(exc.headers))
-        raise RuntimeError(f"Resend request failed with HTTP {exc.code}: {response_body}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Resend request failed: {exc.reason}") from exc
+    if completed.stdout:
+        print(completed.stdout.strip())
+    if completed.stderr:
+        print(completed.stderr.strip(), file=sys.stderr)
+
+    if completed.returncode != 0:
+        raise RuntimeError(f"Website email service failed with exit code {completed.returncode}.")
+
+    return json.loads(completed.stdout or "{}")
 
 
 def mark_message_handled(state: dict[str, Any], message_id: str, uid: str, now: dt.datetime) -> None:

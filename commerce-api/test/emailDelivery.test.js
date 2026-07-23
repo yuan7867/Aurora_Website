@@ -108,6 +108,30 @@ test("Resend request uses required headers, body and no reply-to", async () => {
     assert.ok(body.text);
 });
 
+test("support auto reply can reuse Resend dispatcher with support from and reply-to", async () => {
+    let request = null;
+    await sendResendEmail({
+        idempotencyKey: "support-auto-reply/test",
+        to: "customer@example.com",
+        subject: "Support",
+        html: "<p>html</p>",
+        text: "text",
+        from: "Aurora HY Support <support@mail.aurorahy.com>",
+        replyTo: "support@aurorahy.com"
+    }, async (url, options) => {
+        request = { url, options };
+        return {
+            ok: true,
+            json: async () => ({ id: "email_support" })
+        };
+    });
+
+    const body = JSON.parse(request.options.body);
+    assert.equal(request.url, "https://api.resend.com/emails");
+    assert.equal(body.from, "Aurora HY Support <support@mail.aurorahy.com>");
+    assert.equal(body.reply_to, "support@aurorahy.com");
+});
+
 test("successful send marks delivery sent with Resend id", async () => {
     const stub = storageStub();
     const result = await deliverLicenseEmail({
