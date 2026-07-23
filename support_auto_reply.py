@@ -270,6 +270,20 @@ def send_resend_email(
     timeout_seconds: int = 20,
 ) -> dict[str, Any]:
     body = json.dumps(payload).encode("utf-8")
+    print("Resend Request")
+    print("API URL:")
+    print(api_url)
+    print("Token:")
+    print("<hidden>")
+    print("From:")
+    print(payload.get("from", ""))
+    print("Reply-To:")
+    print(payload.get("reply_to", ""))
+    print("To:")
+    print(", ".join(payload.get("to", [])))
+    print("Subject:")
+    print(payload.get("subject", ""))
+
     request = urllib.request.Request(
         api_url,
         data=body,
@@ -286,6 +300,13 @@ def send_resend_email(
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         response_body = exc.read().decode("utf-8", errors="replace")
+        if exc.code == 403:
+            print("HTTP Status")
+            print(exc.code)
+            print("Response Body")
+            print(response_body)
+            print("Response Headers")
+            print(str(exc.headers))
         raise RuntimeError(f"Resend request failed with HTTP {exc.code}: {response_body}") from exc
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Resend request failed: {exc.reason}") from exc
