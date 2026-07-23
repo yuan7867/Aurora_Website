@@ -73,5 +73,15 @@ test("GitHub Actions release pipeline publishes EXE and version manifest through
     assert.match(cli, /updates\/mt5\/version\.json/);
     assert.match(cli, /updates\/xau\/version\.json/);
     assert.match(cli, /loadReleaseManifest/);
+    assert.match(cli, /parseArgs/);
+    assert.match(cli, /verifySignedUrl/);
+    assert.match(cli, /verifyApi/);
     assert.match(cli, /sha256/);
+});
+
+test("publish shortcuts provide one-command MT5 and XAU releases", () => {
+    const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+
+    assert.equal(pkg.scripts["publish:mt5"], "node src/cli/publishUpdateRelease.js --product mt5");
+    assert.equal(pkg.scripts["publish:xau"], "node src/cli/publishUpdateRelease.js --product xau");
 });
