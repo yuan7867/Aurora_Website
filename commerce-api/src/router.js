@@ -25,6 +25,7 @@ import {
     getStatusData,
     saveLiveTradingData
 } from "./services/liveTradingService.js";
+import { processSupportInboundEmail } from "./services/supportGatewayService.js";
 import { parseJsonBody, readJsonBody, readRawBody, sendJson } from "./utils/http.js";
 
 function getHeaders(request) {
@@ -83,6 +84,20 @@ function assertCloudIngestAuthorized(request) {
     }
 }
 
+function assertSupportGatewayAuthorized(request) {
+    if (!config.supportGatewayToken) {
+        const error = new Error("Support Gateway token is not configured.");
+        error.statusCode = 503;
+        throw error;
+    }
+
+    if (!constantTimeEquals(readBearerToken(request), config.supportGatewayToken)) {
+        const error = new Error("Support Gateway request is unauthorized.");
+        error.statusCode = 401;
+        throw error;
+    }
+}
+
 function constantTimeEquals(actual, expected) {
     const actualBuffer = Buffer.from(String(actual || ""), "utf8");
     const expectedBuffer = Buffer.from(String(expected || ""), "utf8");
@@ -130,8 +145,29 @@ export async function commerceRouter(request, response) {
     if (request.method === "GET" && url.pathname === "/health") {
         sendJson(response, 200, {
             status: "ok",
-            service: "aurora-commerce-api"
+            service: "aurora-commerce-api",
+            supportGateway: "ready"
         });
+        return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/support/inbound") {
+        try {
+            assertSupportGatewayAuthorized(request);
+            const payload = await readJsonBody(request);
+            const result = await processSupportInboundEmail({
+                payload
+            });
+            sendJson(response, 200, {
+                status: "ok",
+                supportGateway: result
+            });
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, {
+                status: "error",
+                message: error.message
+            });
+        }
         return;
     }
 

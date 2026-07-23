@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Aurora HY Support Auto Reply V1.1
+Aurora HY Support Auto Reply Prototype Only
+
+Production Support Gateway now runs inside the Aurora Commerce Docker service.
+Do not use this Python IMAP loop as Production.
 
 Purpose:
     Poll the CEO Gmail mailbox that receives Cloudflare Email Routing mail for

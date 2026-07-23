@@ -17,4 +17,5 @@ const server = http.createServer((request, response) => {
 
 server.listen(config.port, () => {
     console.log(`Aurora Commerce API listening on ${config.port}`);
+    console.log("Support Gateway Ready");
 });
