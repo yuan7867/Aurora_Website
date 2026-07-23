@@ -28,16 +28,17 @@ test("download token hash is stable and does not store plaintext token", () => {
     assert.equal(hash.length, 64);
 });
 
-test("R2 presigned URL uses private Cloudflare R2 and ten minute expiry", () => {
-    const url = createR2PresignedGetUrl({
+test("R2 presigned URL uses private Cloudflare R2 and ten minute expiry", async () => {
+    const url = await createR2PresignedGetUrl({
         objectKey: "releases/aurora-mt5-ai-trader/Aurora_MT5_AI_Trader_2.4.0.exe",
         filename: "Aurora_MT5_AI_Trader_2.4.0.exe"
     });
     const parsed = new URL(url);
-    assert.equal(parsed.hostname, "account123.r2.cloudflarestorage.com");
+    assert.equal(parsed.hostname, "aurora-downloads.account123.r2.cloudflarestorage.com");
     assert.equal(parsed.searchParams.get("X-Amz-Expires"), "600");
-    assert.equal(parsed.searchParams.get("X-Amz-Content-Sha256"), "UNSIGNED-PAYLOAD");
-    assert.match(parsed.pathname, /aurora-downloads\/releases\/aurora-mt5-ai-trader/);
+    assert.equal(parsed.searchParams.get("X-Amz-Algorithm"), "AWS4-HMAC-SHA256");
+    assert.equal(parsed.searchParams.has("X-Amz-Signature"), true);
+    assert.match(parsed.pathname, /releases\/aurora-mt5-ai-trader/);
     assert.equal(url.includes("secret-download-key"), false);
 });
 

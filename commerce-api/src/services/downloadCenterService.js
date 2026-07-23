@@ -183,7 +183,7 @@ export async function consumeCustomerDownloadToken({ token, ipAddress, userAgent
     }
 
     const product = findProduct(consumed.token.licenseProductId);
-    const url = createR2PresignedGetUrl({
+    const url = await createR2PresignedGetUrl({
         objectKey: consumed.token.r2ObjectKey,
         filename: product.filename
     });
