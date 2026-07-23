@@ -28,6 +28,8 @@ lerna-debug.log*
 
 # Test output
 coverage/
+__pycache__/
+*.pyc
 
 # Editor directories and files
 .vscode/
