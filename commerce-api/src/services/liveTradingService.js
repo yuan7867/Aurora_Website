@@ -167,14 +167,33 @@ function withPublicStatus(productData) {
     };
 }
 
-function normalizeProduct(productId) {
+function normalizeProduct(productId = defaultProduct) {
     const normalized = String(productId || defaultProduct).trim().toLowerCase();
 
     if (["xau", "aurora-xau", "aurora-xau-ai", "xau-martingale"].includes(normalized)) {
         return "xau";
     }
 
-    return "mt5";
+    if (["mt5", "aurora-mt5", "aurora-mt5-ai", "aurora-mt5-ai-trader"].includes(normalized)) {
+        return "mt5";
+    }
+
+    const error = new Error(`Unsupported live trading product: ${productId || "unknown"}`);
+    error.statusCode = 400;
+    throw error;
+}
+
+function assertPayloadProductMatchesRoute(payloadProduct, routeProduct) {
+    if (!payloadProduct) {
+        return;
+    }
+
+    const payloadNormalized = normalizeProduct(payloadProduct);
+    if (payloadNormalized !== routeProduct) {
+        const error = new Error(`Live trading product mismatch: payload ${payloadNormalized} cannot be saved to ${routeProduct}.`);
+        error.statusCode = 400;
+        throw error;
+    }
 }
 
 async function readLiveTradingData() {
@@ -208,6 +227,7 @@ export async function saveLiveTradingData(payload, productId = defaultProduct) {
 
     const product = normalizeProduct(productId);
     const liveTradingData = normalizeLiveTradingPayload(payload);
+    assertPayloadProductMatchesRoute(liveTradingData.product, product);
     liveTradingData.product = product === "xau" ? "aurora-xau" : "aurora-mt5";
     const currentProductData = existing.products?.[product];
 

@@ -190,3 +190,17 @@ test("MT5 live data remains product-isolated", async () => {
     assert.equal(xau.product, "aurora-xau");
     assert.notEqual(mt5.status.balance, xau.status.balance);
 });
+
+test("XAU payload cannot be saved through MT5 route", async () => {
+    await assert.rejects(
+        () => service.saveLiveTradingData(snapshot({ product: "aurora-xau" }), "mt5"),
+        /payload xau cannot be saved to mt5/
+    );
+});
+
+test("unknown live trading product is rejected instead of defaulting to MT5", async () => {
+    await assert.rejects(
+        () => service.getLiveTradingProductData("aurora-luno"),
+        /Unsupported live trading product/
+    );
+});
