@@ -191,6 +191,22 @@ test("MT5 live data remains product-isolated", async () => {
     assert.notEqual(mt5.status.balance, xau.status.balance);
 });
 
+test("MT5 Today's P/L prefers closed P/L this trading day", async () => {
+    await service.saveLiveTradingData(snapshot({
+        product: "aurora-mt5",
+        timestamp: new Date().toISOString(),
+        performance: {
+            closedPLThisTradingDay: 1.18,
+            todayProfit: 18.55,
+            winRate: 1,
+            runningDays: 1
+        }
+    }), "mt5");
+
+    const mt5 = await service.getLiveTradingProductData("mt5");
+    assert.equal(mt5.performance.todayProfit, 1.18);
+});
+
 test("XAU payload cannot be saved through MT5 route", async () => {
     await assert.rejects(
         () => service.saveLiveTradingData(snapshot({ product: "aurora-xau" }), "mt5"),
